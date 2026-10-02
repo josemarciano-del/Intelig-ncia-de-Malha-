@@ -1004,7 +1004,7 @@ def main():
         x[1] += v["fonte"] == "gps"
         x[2] += v["fonte"] == "planejada"
         x[3] += (v["orig"], v["dest"]) in via_malha
-    gps_meses = [ym for ym in yms if serie[ym][1]]
+    gps_meses = [ym for ym in yms if serie[ym][1] >= 0.05 * serie[ym][0]]   # 1º mês com GPS de fato (não viagem que vira o mês)
     kpi = dict(
         periodo=f"{ini} a {fim}", meses=n_meses, data_inicio=d_ini.isoformat(), data_fim=d_fim.isoformat(),
         recente_inicio=rec_ini, meses_recentes=n_rec, ativo_inicio=ativo_ini, ativo_dias=ATIVO_DIAS,

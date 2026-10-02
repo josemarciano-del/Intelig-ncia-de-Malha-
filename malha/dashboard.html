@@ -602,6 +602,7 @@ async function abrirZ(k){
 if(typeof DecompressionStream==="undefined"){ document.body.innerHTML='<p style="padding:40px;font:15px system-ui">Navegador desatualizado: abra no Chrome, Edge, Firefox ou Safari atualizados.</p>'; return; }
 const [D, BASE, ROD, CID] = await Promise.all(["dados","base","rod","cid"].map(abrirZ));
 const K = D.kpi;
+D.troncos.sort((a,b)=>a.codigo.localeCompare(b.codigo));   // T001 = maior fluxo no período
 const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = id => document.getElementById(id);
 const fmt = n => n==null ? "–" : Number(n).toLocaleString("pt-BR");
