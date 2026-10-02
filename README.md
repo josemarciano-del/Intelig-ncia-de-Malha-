@@ -7,7 +7,7 @@ para substituir o cadastro de rotas CNPJ → CNPJ.
 ## Como rodar
 
 ```bash
-pip install h3 openpyxl
+pip install h3 openpyxl shapely
 echo "CRD_TOKEN=<token da API>" > .env          # nunca versionar
 
 python -m malha.coleta cargas 2022-01 2026-10   # cadastro de viagens (retomável)
@@ -15,8 +15,12 @@ python -m malha.coleta gps    2026-04 2026-09   # GPS histórico por placa x mê
 python -m malha.coleta rotas  2026-04 2026-09   # traçado planejado de cada rota usada
 python -m malha.coleta autotrac 2026-04 2026-09  # placas sem GPS: Autotrac ou outro rastreador
 python -m malha.processa      2026-04 2026-09   # troncos, nós, pontas, rotas padrão
-python -m malha.dashboard                       # gera data/saida/dashboard_malha.html
+python -m malha.dashboard                       # gera data/saida/dashboard_malha.html (+ versão para publicar)
+python -m malha.auditoria                       # checa a qualidade da malha gerada (OK / ATENÇÃO)
 ```
+
+O processamento consulta o roteirizador OSRM (OpenStreetMap) para o traçado e o km real dos troncos e pontas;
+as respostas ficam em cache em `data/osrm/`. Para usar um servidor OSRM próprio: `MALHA_OSRM=https://...`.
 
 Saídas em `data/saida/` (fora do git, contém dados confidenciais):
 - `dashboard_malha.html` — dashboard único (abre no navegador; mapa usa OpenStreetMap)
@@ -27,11 +31,15 @@ Saídas em `data/saida/` (fora do git, contém dados confidenciais):
 1. Cada viagem vira uma trilha em hexágonos H3 (~36 km²): GPS realizado quando liga origem ao destino;
    senão, o traçado da rota planejada.
 2. Hexágono é **tronco** quando passam ≥ 5 pares cidade→cidade distintos e ≥ 5 viagens/mês.
-3. O grafo dos hexágonos-tronco é limpo (árvore geradora máxima + anéis reais), quebrado em trechos entre
-   **nós** (bifurcações e pontos onde ≥ 4 viagens/mês entram ou saem) e os trechos em que o fluxo segue reto
-   são unidos em **corredores (troncos)**.
-4. Cada viagem é decomposta em ponta de origem (cidade → nó de entrada), troncos e ponta de destino.
-   A **rota padrão** de cada par cidade→cidade é a via que melhor representa as viagens do par.
-5. Nomes vêm da base de municípios do IBGE (`malha/ref`).
+3. O grafo é quebrado em trechos entre nós (bifurcações e pontos com ≥ 4 entradas/saídas por mês).
+   Nós a menos de 20 km viram um **polo** (no máximo 30 km de diâmetro); trechos internos ao polo e trechos
+   com < 2 viagens/mês saem da malha.
+4. Trechos viram **corredores (troncos)** quando o fluxo atravessa o polo em linha reta; corredores que serpenteiam
+   são quebrados, e corredores vizinhos da mesma rodovia seguindo reto são unidos.
+5. Cada tronco é roteado por estrada (OSRM): traçado real, km real e rodovias (BR-116, BR-101...).
+6. **Rota padrão** de cada par cidade→cidade = menor custo pela malha (ponta × 1,7 + tronco + 25 km por troca de tronco,
+   com 15% de bônus nos troncos que o par já usa). Se ficar > 1,25 × a ligação direta, o par fica como **ligação direta**.
+   O planejador do dashboard usa exatamente a mesma regra.
+7. Nomes: municípios do IBGE no Brasil; Natural Earth no exterior.
 
 Parâmetros no topo de `malha/processa.py`. Detalhes das APIs: [docs/apis.md](docs/apis.md).
