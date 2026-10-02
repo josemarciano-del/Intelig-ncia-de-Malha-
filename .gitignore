@@ -1,0 +1,7 @@
+# credenciais e dados brutos (confidenciais) nunca vão para o git
+.env
+*.env
+data/
+raw/
+*.json.gz
+__pycache__/
