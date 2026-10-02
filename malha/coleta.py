@@ -2,13 +2,14 @@
 
 Uso:
   python -m malha.coleta cargas 2022-01 2026-10    # cadastro de viagens por mês de criação
-  python -m malha.coleta gps 2026-04 2026-09       # GPS histórico por placa x mês
-  python -m malha.coleta rotas 2026-04 2026-09     # polilinha planejada de cada rota usada no período
-  python -m malha.coleta autotrac 2026-04 2026-09  # placas sem GPS: estão na Autotrac ou usam outro rastreador?
+  python -m malha.coleta gps 2024-08 2026-10       # GPS histórico por placa x mês (a Autotrac só tem a partir de 08/2024)
+  python -m malha.coleta rotas 2024-01 2026-10     # polilinha planejada de cada rota usada no período
+  python -m malha.coleta autotrac 2024-08 2026-10  # placas sem GPS: estão na Autotrac ou usam outro rastreador?
 """
 import glob
 import os
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 
@@ -69,7 +70,8 @@ def iter_cargas(ini=None, fim=None):
 def gps_placa_mes(args):
     placa, y, m = args
     fn = os.path.join(DATA, "gps", f"{y}-{m:02d}", f"{placa}.json.gz")
-    if os.path.exists(fn):
+    # mês fechado não muda; mês corrente só é baixado de novo depois de 6 h
+    if os.path.exists(fn) and ((y, m) < (date.today().year, date.today().month) or time.time() - os.path.getmtime(fn) < 6 * 3600):
         return 0
     a, b = limites(y, m)
     pts, off = [], 0
@@ -90,12 +92,12 @@ def gps_placa_mes(args):
 
 # ---------------------------------------------------------------- rotas planejadas
 def rota_planejada(args):
-    """Polilinha planejada da rota; tenta até 3 viagens (o comparativo dá 404 em algumas cargas)."""
+    """Polilinha planejada da rota; tenta até 5 viagens (o comparativo dá 404/422 em algumas cargas)."""
     cod, cars = args
     fn = os.path.join(DATA, "rotas", f"{cod}.json.gz")
     if os.path.exists(fn) and not ler(fn).get("erro"):
         return
-    for car in cars[:3]:
+    for car in cars[:5]:
         d = get("viagem/comparativo.php", car_codigo=car)
         if d.get("sucesso"):
             break
@@ -124,21 +126,39 @@ def main():
         if cmd == "cargas":
             print("TOTAL", sum(ex.map(cargas_mes, reversed(ms))))
         elif cmd == "gps":
-            # placas com viagem no período (janela de criação com 1 mês de folga antes)
-            placas = {x["veiculo"]["placa"] for x in iter_cargas(f"{ms[0][0]}-{ms[0][1]:02d}", fim)
-                      if x["veiculo"]["placa"]}
-            tarefas = [(p, y, m) for (y, m) in ms for p in sorted(placas)]
-            print(f"{len(placas)} placas x {len(ms)} meses = {len(tarefas)} consultas", flush=True)
+            # só placa x mês com viagem criada no mês ou no mês anterior (viagem que atravessa a virada do mês)
+            y0, m0 = ms[0]
+            antes = f"{y0 - (m0 == 1)}-{(m0 - 2) % 12 + 1:02d}"
+            alvo = set(ms)
+            tarefas = set()
+            for x in iter_cargas(antes, fim):
+                p = x["veiculo"]["placa"]
+                if not p:
+                    continue
+                y, m = map(int, x["data_criacao"][:7].split("-"))
+                for ym in ((y, m), (y + (m == 12), m % 12 + 1)):
+                    if ym in alvo:
+                        tarefas.add((p, *ym))
+            tarefas = sorted(tarefas, key=lambda t: (t[1], t[2], t[0]), reverse=True)
+            print(f"{len({t[0] for t in tarefas})} placas, {len(tarefas)} consultas placa x mês", flush=True)
             for i, _ in enumerate(ex.map(gps_placa_mes, tarefas), 1):
                 if i % 200 == 0:
                     print(f"gps {i}/{len(tarefas)}", flush=True)
         elif cmd == "autotrac":
-            # só placas sem GPS em algum mês do período: está na Autotrac (tempo real) ou usa outro rastreador?
+            # placas com viagem nos últimos 90 dias e sem GPS em algum mês com viagem:
+            # estão na Autotrac (tempo real) ou usam outro rastreador?
             import json
-            placas = sorted({x["veiculo"]["placa"] for x in iter_cargas(ini, fim) if x["veiculo"]["placa"]})
-            falta = [p for p in placas if any(
+            corte = (date.today() - timedelta(days=90)).isoformat()
+            alvo = {f"{y}-{m:02d}" for y, m in ms}
+            mv, ult = {}, {}
+            for x in iter_cargas(ini, fim):
+                p = x["veiculo"]["placa"]
+                if p:
+                    mv.setdefault(p, set()).add(x["data_criacao"][:7])
+                    ult[p] = max(ult.get(p, ""), x["data_criacao"][:10])
+            falta = sorted(p for p in mv if ult[p] >= corte and any(
                 not os.path.exists(fn) or os.path.getsize(fn) <= 60
-                for fn in (os.path.join(DATA, "gps", f"{y}-{m:02d}", f"{p}.json.gz") for y, m in ms))]
+                for fn in (os.path.join(DATA, "gps", ym, f"{p}.json.gz") for ym in mv[p] & alvo)))
             res = {p: {"autotrac": a, "grupo": g} for p, a, g in ex.map(placa_autotrac, falta)}
             json.dump(res, open(os.path.join(DATA, "placas_autotrac.json"), "w"), ensure_ascii=False)
             print(f"{len(falta)} placas verificadas; fora da Autotrac: {sum(not v['autotrac'] for v in res.values())}")

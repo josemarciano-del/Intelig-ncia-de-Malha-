@@ -2,6 +2,8 @@
 
 Uso: python -m malha.dashboard   ->  data/saida/dashboard_malha.html
 """
+import base64
+import gzip
 import json
 import os
 
@@ -24,18 +26,24 @@ def cidades(dados):
     return out + sorted(ex.values())
 
 
+def gz64(texto):
+    return base64.b64encode(gzip.compress(texto.encode("utf-8"), 9, mtime=0)).decode("ascii")
+
+
 def main():
     dados = ler(os.path.join(SAIDA, "malha.json.gz"))
     tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html"), encoding="utf-8").read()
-    js = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     ref = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ref")
+    rod = os.path.join(ref, "rodovias.json")
+    z = dict(
+        dados=gz64(json.dumps(dados, ensure_ascii=False, separators=(",", ":"))),
+        base=gz64(open(os.path.join(ref, "basemap.json"), encoding="utf-8").read()),
+        rod=gz64(open(rod, encoding="utf-8").read() if os.path.exists(rod) else "null"),
+        cid=gz64(json.dumps(cidades(dados), ensure_ascii=False, separators=(",", ":"))),
+    )
     html = tpl.replace("/*__LEAFLET_CSS__*/", open(os.path.join(ref, "leaflet.css"), encoding="utf-8").read())
     html = html.replace("/*__LEAFLET_JS__*/", open(os.path.join(ref, "leaflet.js"), encoding="utf-8").read())
-    html = html.replace("/*__BASEMAP__*/null", open(os.path.join(ref, "basemap.json"), encoding="utf-8").read())
-    rod = os.path.join(ref, "rodovias.json")
-    html = html.replace("/*__RODOVIAS__*/null", open(rod, encoding="utf-8").read() if os.path.exists(rod) else "null")
-    html = html.replace("/*__DADOS__*/null", js)
-    html = html.replace("/*__CIDADES__*/null", json.dumps(cidades(dados), ensure_ascii=False, separators=(",", ":")))
+    html = html.replace("/*__Z__*/{}", json.dumps(z))
     destino = os.path.join(SAIDA, "dashboard_malha.html")
     open(destino, "w", encoding="utf-8").write(html)
     print(destino, f"{os.path.getsize(destino) / 1e6:.1f} MB")

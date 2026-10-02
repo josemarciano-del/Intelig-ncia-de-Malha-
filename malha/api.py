@@ -29,7 +29,7 @@ def get(endpoint, tentativas=5, **params):
         try:
             return json.load(urllib.request.urlopen(req, timeout=300))
         except urllib.error.HTTPError as e:
-            if e.code in (400, 401, 403, 404):
+            if e.code in (400, 401, 403, 404, 422):
                 try:
                     return json.load(e)
                 except Exception:

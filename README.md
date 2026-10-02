@@ -11,10 +11,10 @@ pip install h3 openpyxl shapely
 echo "CRD_TOKEN=<token da API>" > .env          # nunca versionar
 
 python -m malha.coleta cargas 2022-01 2026-10   # cadastro de viagens (retomável)
-python -m malha.coleta gps    2026-04 2026-09   # GPS histórico por placa x mês
-python -m malha.coleta rotas  2026-04 2026-09   # traçado planejado de cada rota usada
-python -m malha.coleta autotrac 2026-04 2026-09  # placas sem GPS: Autotrac ou outro rastreador
-python -m malha.processa      2026-04 2026-09   # troncos, nós, pontas, rotas padrão
+python -m malha.coleta gps    2024-08 2026-10   # GPS histórico por placa x mês (a Autotrac só tem a partir de 08/2024)
+python -m malha.coleta rotas  2024-01 2026-10   # traçado planejado de cada rota usada
+python -m malha.coleta autotrac 2024-08 2026-10  # placas sem GPS: Autotrac ou outro rastreador
+python -m malha.processa      2024-01 2026-10   # troncos, nós, pontas, rotas padrão
 python -m malha.dashboard                       # gera data/saida/dashboard_malha.html (+ versão para publicar)
 python -m malha.auditoria                       # checa a qualidade da malha gerada (OK / ATENÇÃO)
 ```
@@ -30,7 +30,9 @@ Saídas em `data/saida/` (fora do git, contém dados confidenciais):
 
 1. Cada viagem vira uma trilha em hexágonos H3 (~36 km²): GPS realizado quando liga origem ao destino;
    senão, o traçado da rota planejada.
-2. Hexágono é **tronco** quando passam ≥ 5 pares cidade→cidade distintos e ≥ 5 viagens/mês.
+2. Hexágono é **tronco** quando passam ≥ 5 pares cidade→cidade distintos e ≥ 5 viagens/mês. Em período longo os
+   limites "por mês" valem sobre no máximo 12 meses (≥ 60 viagens no período), para um corredor novo ou sazonal
+   não sumir na média de anos.
 3. O grafo é quebrado em trechos entre nós (bifurcações e pontos com ≥ 4 entradas/saídas por mês).
    Nós a menos de 20 km viram um **polo** (no máximo 30 km de diâmetro); trechos internos ao polo e trechos
    com < 2 viagens/mês saem da malha.
@@ -41,6 +43,9 @@ Saídas em `data/saida/` (fora do git, contém dados confidenciais):
    com 15% de bônus nos troncos que o par já usa). Se ficar > 1,25 × a ligação direta, o par fica como **ligação direta**.
    O planejador do dashboard usa exatamente a mesma regra.
 7. Nomes: municípios do IBGE no Brasil; Natural Earth no exterior.
+8. **Viagens/mês** = média dos últimos 12 meses do período (operação atual). Tronco ou par sem viagem nos últimos
+   90 dias aparece como **inativo** (continua na malha pelo histórico). Antes de 08/2024 não há GPS histórico na
+   Autotrac: essas viagens entram pela rota planejada.
 
 ## Mapa-base
 

@@ -9,7 +9,7 @@ import math
 import os
 import re
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import h3
 
@@ -22,6 +22,9 @@ MIN_OD = 5              # hexágono é tronco se passam >= 5 pares cidade->cidad
 MIN_VIAGENS_MES = 5     # ... e >= 5 viagens por mês (~1 por semana)
 MIN_ACESSO_MES = 4      # entrada/saída do tronco vira nó se >= 4 viagens/mês entram ou saem ali
 MAX_DEST_KM = 40        # trilha GPS precisa começar/terminar a até 40 km da 1ª/última etapa
+MESES_REF = 12          # limites "por mês" valem sobre no máximo 12 meses: período longo não apaga corredor novo ou sazonal
+MESES_RECENTES = 12     # "viagens/mês" = média dos últimos 12 meses do período (operação atual)
+ATIVO_DIAS = 90         # tronco/rota sem viagem nos últimos 90 dias aparece como inativo
 SAIDA = os.path.join(DATA, "saida")
 
 
@@ -741,11 +744,22 @@ def main():
     from .estrada import matriz
     ini, fim = sys.argv[1], sys.argv[2]
     ms = list(meses(ini, fim))
-    n_meses = len(ms)
     vs = carregar_viagens(ini, fim)
     print("viagens com etapas:", len(vs), flush=True)
+    # meses efetivos (o mês corrente conta só os dias já passados) e janela recente
+    d_ini = date(*ms[0], 1)
+    d_fim = max(date.fromisoformat(v["criacao"]) for v in vs)
+    n_meses = round(((d_fim - d_ini).days + 1) / 30.44, 1)
+    n_ref = min(n_meses, MESES_REF)
+    n_rec = min(n_meses, MESES_RECENTES)
+    rec_ini = (d_fim - timedelta(days=round(n_rec * 30.44) - 1)).isoformat()
+    ativo_ini = (d_fim - timedelta(days=ATIVO_DIAS - 1)).isoformat()
+    for v in vs:
+        v["recente"] = v["criacao"] >= rec_ini
+    yms = [f"{y}-{m:02d}" for y, m in ms]
+    pos_ym = {ym: i for i, ym in enumerate(yms)}
     motivos, rotas = trilhas(vs, ms)
-    adj, cell_v, cell_od, nomes = construir_malha(vs, n_meses)
+    adj, cell_v, cell_od, nomes = construir_malha(vs, n_ref)
     pe = pontos_estrada(rotas)
 
     # 1. trechos entre bifurcações; pontos de entrada/saída frequentes viram nós
@@ -758,7 +772,7 @@ def main():
             acesso[tc[-1]] += 1
     extra = set()
     for c, n in sorted(acesso.items(), key=lambda kv: (-kv[1], kv[0])):
-        if n < MIN_ACESSO_MES * n_meses:
+        if n < MIN_ACESSO_MES * n_ref:
             break
         if c in nos or any(km(centro(c), centro(e)) < 25 for e in extra | nos):
             continue
@@ -771,7 +785,7 @@ def main():
     ativos = {i for i, t in enumerate(trechos) if hub[t[0]] != hub[t[-1]]}
     decompor(vs, trechos, ativos, hub)
     tr_v = collections.Counter(s for v in vs for s in set(v["troncos"]))
-    ativos = {i for i in ativos if tr_v[i] >= MIN_TRECHO_MES * n_meses}
+    ativos = {i for i in ativos if tr_v[i] >= MIN_TRECHO_MES * n_ref}
     decompor(vs, trechos, ativos, hub)
     tr_v = collections.Counter(s for v in vs for s in set(v["troncos"]))
     print(f"hexágonos tronco: {len(adj)} | trechos: {len(trechos)} -> ativos {len(ativos)} | polos: {len(set(hub.values()))}", flush=True)
@@ -790,8 +804,9 @@ def main():
             print(f"  traçado {k}/{len(corr)}", flush=True)
     G = unir_mesma_rodovia(G)
     mapa = {s_: k for k, g in enumerate(G) for s_, _ in g["cad"]}
-    tr_v = collections.Counter()
+    tr_v, tr_rec = collections.Counter(), collections.Counter()
     tr_od, tr_cli, tr_rotas = collections.defaultdict(set), collections.defaultdict(collections.Counter), collections.defaultdict(set)
+    tr_serie, tr_ult = collections.defaultdict(lambda: [0] * len(yms)), {}
     for v in vs:
         ids = []
         for s_ in v["troncos"]:
@@ -800,6 +815,10 @@ def main():
         v["troncos"] = ids
         for i in set(ids):
             tr_v[i] += 1
+            tr_rec[i] += v["recente"]
+            if v["criacao"][:7] in pos_ym:
+                tr_serie[i][pos_ym[v["criacao"][:7]]] += 1
+            tr_ult[i] = max(tr_ult.get(i, ""), v["criacao"])
             tr_od[i].add((v["orig"], v["dest"]))
             tr_cli[i][v["cliente"]] += 1
             tr_rotas[i].add(v["rota"])
@@ -835,7 +854,8 @@ def main():
                 via.append(n)
         T.append(dict(id=k, no_a=pol[0], no_b=pol[-1], nos_lin=lin, km=round(km_real), rodovias=rod, estrada=g["estrada"],
                       a=nome_polo[pol[0]], b=nome_polo[pol[-1]], via=via,
-                      viagens=tr_v[k], viagens_mes=round(tr_v[k] / n_meses), pares_od=len(tr_od[k]),
+                      viagens=tr_v[k], viagens_mes=round(tr_rec[k] / n_rec), ultima=tr_ult.get(k), ativo=tr_ult.get(k, "") >= ativo_ini,
+                      serie=tr_serie[k], pares_od=len(tr_od[k]),
                       rotas=len(tr_rotas[k]), clientes=tr_cli[k].most_common(5),
                       geo=[[round(a, 4), round(b, 4)] for a, b in ll]))
     ordem = sorted(range(len(T)), key=lambda i: (-T[i]["viagens"], T[i]["no_a"]))
@@ -855,7 +875,7 @@ def main():
             ac_polo[v["entrada"]] += 0
     nid = {h: f"N{n + 1:03d}" for n, h in enumerate(sorted(usados, key=lambda h: (-ac_polo[h], h)))}
     N = [dict(id=nid[h], nome=nome_polo[h], lat=round(pos_polo[h][0], 4), lng=round(pos_polo[h][1], 4), acessos=ac_polo[h], grau=grau[h],
-              tipo="bifurcação" if grau[h] >= 3 else "ponta de linha" if grau[h] == 1 else "acesso" if ac_polo[h] >= MIN_ACESSO_MES * n_meses else "passagem")
+              tipo="bifurcação" if grau[h] >= 3 else "ponta de linha" if grau[h] == 1 else "acesso" if ac_polo[h] >= MIN_ACESSO_MES * n_ref else "passagem")
          for h in usados]
     for t in T:
         t["no_a"], t["no_b"] = nid[t["no_a"]], nid[t["no_b"]]
@@ -934,7 +954,8 @@ def main():
             km_rota = round(direto)
         ader = [v["aderencia"] for v in lst if "aderencia" in v]
         R.append(dict(
-            origem=o, destino=d, viagens=len(lst), viagens_mes=round(len(lst) / n_meses, 1),
+            origem=o, destino=d, viagens=len(lst), viagens_mes=round(sum(v["recente"] for v in lst) / n_rec, 1),
+            ultima=max(v["criacao"] for v in lst), ativo=max(v["criacao"] for v in lst) >= ativo_ini,
             rotas_cadastradas=len({v["rota"] for v in lst}), codigos_rota=sorted({v["rota"] for v in lst}),
             entrada=ent, troncos=list(via), saida=sai, km_tronco=round(kmt), km_rota=km_rota,
             km_ponta_o=round(kpo) if via else None, km_ponta_d=round(kpd) if via else None,
@@ -975,8 +996,21 @@ def main():
          for (n, d), c in pontas_d.items()]
     P.sort(key=lambda p: (-p["viagens"], p["cidade"]))
 
+    serie = collections.defaultdict(lambda: [0, 0, 0, 0])
+    via_malha = {(r["origem"], r["destino"]) for r in R if r["troncos"]}
+    for v in vs:
+        x = serie[v["criacao"][:7]]
+        x[0] += 1
+        x[1] += v["fonte"] == "gps"
+        x[2] += v["fonte"] == "planejada"
+        x[3] += (v["orig"], v["dest"]) in via_malha
+    gps_meses = [ym for ym in yms if serie[ym][1]]
     kpi = dict(
-        periodo=f"{ini} a {fim}", meses=n_meses, viagens=len(vs),
+        periodo=f"{ini} a {fim}", meses=n_meses, data_inicio=d_ini.isoformat(), data_fim=d_fim.isoformat(),
+        recente_inicio=rec_ini, meses_recentes=n_rec, ativo_inicio=ativo_ini, ativo_dias=ATIVO_DIAS,
+        gps_desde=gps_meses[0] if gps_meses else None,
+        serie_mensal=[[ym, *serie[ym]] for ym in yms],
+        viagens=len(vs), viagens_recentes=sum(v["recente"] for v in vs),
         viagens_gps=sum(v["fonte"] == "gps" for v in vs),
         viagens_plan=sum(v["fonte"] == "planejada" for v in vs),
         viagens_sem_trilha=sum(v["fonte"] is None for v in vs),
@@ -984,13 +1018,15 @@ def main():
         rotas_cadastradas=len({v["rota"] for v in vs}), pares_od=len(pares),
         troncos=len(T), nos=len(N), pontas_origem=len(pontas_o), pontas_destino=len(pontas_d),
         rotas_padrao=sum(1 for r in R if r["troncos"]), pares_sem_tronco=sum(1 for r in R if not r["troncos"]),
+        troncos_ativos=sum(t["ativo"] for t in T), pares_ativos=sum(r["ativo"] for r in R),
+        rotas_cadastradas_ativas=len({v["rota"] for v in vs if v["criacao"] >= ativo_ini}),
         motivos_sem_gps=dict(motivos), placas=len({v["placa"] for v in vs}),
-        placas_sem_gps_detalhe=placas_sem_gps(vs, ms), fator_ponta=fator_ponta,
+        placas_sem_gps_detalhe=placas_sem_gps(vs, ms, ativo_ini), fator_ponta=fator_ponta,
         km_vs_planejado=[round(erros[int(len(erros) * q)], 3) for q in (.1, .25, .5, .75, .9)] if erros else None,
         troncos_por_estrada=sum(t["estrada"] for t in T),
         gerado_em=datetime.now().strftime("%d/%m/%Y %H:%M"),
     )
-    H = [[c, cell_v[c], len(cell_od[c])] for c in sorted(cell_v) if cell_v[c] >= 10]
+    H = [[c, cell_v[c], len(cell_od[c])] for c in sorted(cell_v) if cell_v[c] >= max(10, 2 * n_ref)]
     H = [[round(centro(c)[0], 3), round(centro(c)[1], 3), n, od] for c, n, od in H]
     out = dict(kpi=kpi, troncos=T, nos=N, rotas=R, pontas=P, calor=H)
     salvar(out, os.path.join(SAIDA, "malha.json.gz"))
@@ -1029,13 +1065,14 @@ class Lugares:
         return "?"
 
 
-def placas_sem_gps(vs, ms):
-    """Placas com viagem no período e sem nenhum ponto no banco histórico de GPS (arquivo vazio)."""
-    tem = collections.defaultdict(list)
+def placas_sem_gps(vs, ms, ativo_ini):
+    """Placas com viagem em mês coberto pelo GPS histórico (a partir do 1º mês com dados) e sem nenhum ponto nesse mês."""
+    tem = collections.defaultdict(set)
     for y, m in ms:
         for fn in glob.glob(os.path.join(DATA, "gps", f"{y}-{m:02d}", "*.json.gz")):
             if os.path.getsize(fn) > 60:
-                tem[os.path.basename(fn)[:-8]].append(f"{y}-{m:02d}")
+                tem[os.path.basename(fn)[:-8]].add(f"{y}-{m:02d}")
+    era = min((ym for s in tem.values() for ym in s), default=None)
     por = collections.defaultdict(list)
     for v in vs:
         if v["placa"]:
@@ -1045,16 +1082,19 @@ def placas_sem_gps(vs, ms):
     at = json.load(open(fn)) if os.path.exists(fn) else {}
     out = []
     for p, lst in por.items():
-        if len(tem.get(p, [])) < len(ms):
-            a = at.get(p)
-            situacao = ("não verificada" if a is None else "Autotrac, falha no histórico" if a["autotrac"]
-                        else "fora da Autotrac")
-            out.append(dict(placa=p, situacao=situacao, viagens=len(lst), meses_com_gps=len(tem.get(p, [])),
-                            meses_no_periodo=len(ms),
-                            rastreador=collections.Counter(v["rastreador"] for v in lst).most_common(1)[0][0],
-                            ultima_viagem=max(v["criacao"] for v in lst),
-                            cliente_principal=collections.Counter(v["cliente"] for v in lst).most_common(1)[0][0]))
-    out.sort(key=lambda r: (r["meses_com_gps"], -r["viagens"]))
+        mv = {v["criacao"][:7] for v in lst if era and v["criacao"][:7] >= era}
+        if not mv or mv <= tem.get(p, set()):
+            continue
+        ultima = max(v["criacao"] for v in lst)
+        a = at.get(p)
+        situacao = ("sem viagem recente" if ultima < ativo_ini else "não verificada" if a is None
+                    else "Autotrac, falha no histórico" if a["autotrac"] else "fora da Autotrac")
+        out.append(dict(placa=p, situacao=situacao, viagens=len(lst), meses_com_gps=len(mv & tem.get(p, set())),
+                        meses_com_viagem=len(mv),
+                        rastreador=collections.Counter(v["rastreador"] for v in lst).most_common(1)[0][0],
+                        ultima_viagem=ultima,
+                        cliente_principal=collections.Counter(v["cliente"] for v in lst).most_common(1)[0][0]))
+    out.sort(key=lambda r: (r["situacao"] == "sem viagem recente", r["meses_com_gps"] / r["meses_com_viagem"], -r["viagens"]))
     return out
 
 
@@ -1065,7 +1105,8 @@ def exportar_excel(out, caminho):
     ws = wb.active
     ws.title = "Resumo"
     k = out["kpi"]
-    for linha in [("Período", k["periodo"]), ("Viagens analisadas", k["viagens"]),
+    for linha in [("Período", f"{k['data_inicio']} a {k['data_fim']}"), ("GPS histórico desde", k.get("gps_desde")),
+                  ("Viagens/mês = média desde", k["recente_inicio"]), ("Viagens analisadas", k["viagens"]),
                   ("Rotas cadastradas usadas", k["rotas_cadastradas"]), ("Pares cidade→cidade (rotas padrão)", k["pares_od"]),
                   ("Troncos", k["troncos"]), ("Nós", k["nos"]), ("Pontas de origem", k["pontas_origem"]),
                   ("Pontas de destino", k["pontas_destino"]), ("Viagens com GPS realizado", k["viagens_gps"]),
@@ -1086,16 +1127,18 @@ def exportar_excel(out, caminho):
             w.column_dimensions[col[0].column_letter].width = min(60, max(10, max(len(str(c.value or "")) for c in col[:200]) + 2))
 
     aba("Rotas padrão", ["Origem", "Destino", "Tipo", "Nó entrada", "Troncos", "Nó saída", "Cadastro padronizado",
-                         "Viagens", "Viagens/mês", "Rotas cadastradas hoje", "Códigos de rota", "% viagens na via padrão",
+                         "Viagens no período", "Viagens/mês (últimos 12 meses)", "Última viagem", "Ativa (90 dias)", "Rotas cadastradas hoje", "Códigos de rota", "% viagens na via padrão",
                          "km cadastro", "km pela malha", "km ponta origem", "km em tronco", "km ponta destino",
                          "Via mais usada (histórico)", "% GPS", "% vazio", "Clientes"],
         [[r["origem"], r["destino"], r["tipo"], r["entrada"], " > ".join(r["troncos"]), r["saida"],
           " > ".join([r["origem"], r["entrada"], *r["troncos"], r["saida"], r["destino"]]) if r["troncos"] else f"{r['origem']} > {r['destino']} (direta)",
-          r["viagens"], r["viagens_mes"], r["rotas_cadastradas"], ", ".join(map(str, r["codigos_rota"])), r["pct_via_padrao"],
+          r["viagens"], r["viagens_mes"], r["ultima"], "sim" if r["ativo"] else "não", r["rotas_cadastradas"], ", ".join(map(str, r["codigos_rota"])), r["pct_via_padrao"],
           r["km_plan"], r["km_rota"], r["km_ponta_o"], r["km_tronco"], r["km_ponta_d"], " > ".join(r["vias_historicas"]),
           r["pct_gps"], r["vazio"], ", ".join(c[0] for c in r["clientes"])] for r in out["rotas"]])
-    aba("Troncos", ["Código", "Tronco", "Rodovias", "Nó A", "Nó B", "km", "Viagens", "Viagens/mês", "Pares O/D", "Rotas cadastradas", "Clientes"],
-        [[t["codigo"], t["nome"], " / ".join(t.get("rodovias", [])), t["no_a"], t["no_b"], t["km"], t["viagens"], t["viagens_mes"], t["pares_od"], t["rotas"],
+    aba("Troncos", ["Código", "Tronco", "Rodovias", "Nó A", "Nó B", "km", "Viagens no período", "Viagens/mês (últimos 12 meses)",
+                     "Última viagem", "Ativo (90 dias)", "Pares O/D", "Rotas cadastradas", "Clientes"],
+        [[t["codigo"], t["nome"], " / ".join(t.get("rodovias", [])), t["no_a"], t["no_b"], t["km"], t["viagens"], t["viagens_mes"],
+          t["ultima"], "sim" if t["ativo"] else "não", t["pares_od"], t["rotas"],
           ", ".join(c[0] for c in t["clientes"])] for t in sorted(out["troncos"], key=lambda t: t["codigo"])])
     aba("Nós", ["Nó", "Local", "Tipo", "Lat", "Lng", "Entradas/saídas"],
         [[n["id"], n["nome"], n["tipo"], n["lat"], n["lng"], n["acessos"]] for n in sorted(out["nos"], key=lambda n: n["id"])])
@@ -1103,8 +1146,8 @@ def exportar_excel(out, caminho):
         [[p["tipo"], p["cidade"], p["no"], p.get("km"), p["viagens"]] for p in sorted(out["pontas"], key=lambda p: -p["viagens"])])
     sem = k["placas_sem_gps_detalhe"]
     aba("Placas sem GPS", ["Placa", "Situação", "Rastreador (cadastro)", "Viagens no período", "Meses com GPS",
-                           "Meses no período", "Última viagem", "Cliente principal"],
-        [[p["placa"], p["situacao"], p["rastreador"], p["viagens"], p["meses_com_gps"], p["meses_no_periodo"],
+                           "Meses com viagem (era GPS)", "Última viagem", "Cliente principal"],
+        [[p["placa"], p["situacao"], p["rastreador"], p["viagens"], p["meses_com_gps"], p["meses_com_viagem"],
           p["ultima_viagem"], p["cliente_principal"]] for p in sem])
     wb.save(caminho)
 

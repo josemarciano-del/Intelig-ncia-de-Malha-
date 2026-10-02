@@ -49,7 +49,10 @@ def main():
     rev = sum(retornos(t["geo"]) for t in T)
     tot = sum(max(0, len(t["geo"]) - 2) for t in T)
     chk("Retornos em U no traçado (vértices com virada > 150°)", f"{rev} de {tot} ({100 * rev / max(1, tot):.1f}%)", rev <= 0.005 * tot)
-    chk("Troncos sem viagem", sum(t["viagens_mes"] == 0 for t in T), all(t["viagens_mes"] > 0 for t in T))
+    chk("Troncos sem viagem", sum(t["viagens"] == 0 for t in T), all(t["viagens"] > 0 for t in T))
+    if "ativo" in T[0]:
+        chk(f"Troncos com viagem nos últimos {K.get('ativo_dias', 90)} dias", f"{sum(t['ativo'] for t in T)} de {len(T)}",
+            sum(t["ativo"] for t in T) >= 0.8 * len(T), "os demais seguem na malha pelo histórico")
     curtos = [t for t in T if t["km"] < 15]
     chk("Troncos < 15 km", len(curtos), len(curtos) <= 0.05 * len(T))
     mesmo = [t["codigo"] for t in T if t["no_a"] == t["no_b"] or t["a"] == t["b"]]
@@ -75,8 +78,9 @@ def main():
     pts = sum(len(t["geo"]) for t in T)
     chk("Pontos de traçado no dashboard", pts, pts <= 120000)
     tam = os.path.getsize(os.path.join(SAIDA, "dashboard_malha.html")) / 1e6 if os.path.exists(os.path.join(SAIDA, "dashboard_malha.html")) else 0
-    chk("Tamanho do dashboard (MB)", round(tam, 1), tam <= 8)
-    rel = "AUDITORIA DA MALHA · " + K["periodo"] + "\n" + "\n".join(linhas)
+    chk("Tamanho do dashboard (MB)", round(tam, 1), tam <= 15, "limite de publicação 16 MB")
+    per = f"{K['data_inicio']} a {K['data_fim']}" if K.get("data_inicio") else K["periodo"]
+    rel = "AUDITORIA DA MALHA · " + per + "\n" + "\n".join(linhas)
     open(os.path.join(SAIDA, "auditoria.txt"), "w", encoding="utf-8").write(rel + "\n")
     print(rel)
 
