@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inteligência de Malha</title>
+<style>/*__LEAFLET_CSS__*/</style>
+<script>/*__LEAFLET_JS__*/</script>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s7:#4a3aa7;
+  --seq1:#86b6ef; --seq2:#5598e7; --seq3:#2a78d6; --seq4:#1c5cab; --seq5:#0d366b;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b; --hl:#eb6834;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s7:#9085e9;
+    --seq1:#184f95; --seq2:#256abf; --seq3:#3987e5; --seq4:#6da7ec; --seq5:#b7d3f6; --hl:#d95926;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s7:#9085e9;
+  --seq1:#184f95; --seq2:#256abf; --seq3:#3987e5; --seq4:#6da7ec; --seq5:#b7d3f6; --hl:#d95926;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:20px 24px 8px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between}
+h1{font-size:20px;margin:0;font-weight:650}
+.sub{color:var(--ink2);font-size:13px}
+main{padding:0 24px 32px;max-width:1500px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 16px}
+.kpi{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:12px 14px}
+.kpi .l{color:var(--ink2);font-size:12px}
+.kpi .v{font-size:24px;font-weight:650;margin-top:2px}
+.kpi .n{color:var(--muted);font-size:12px}
+nav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--grid);margin-bottom:14px}
+nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink2);padding:8px 12px;font:inherit;cursor:pointer}
+nav button.on{color:var(--ink);border-bottom-color:var(--s1);font-weight:600}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:14px}
+.mapwrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px}
+#map{height:620px;border-radius:10px;border:1px solid var(--ring)}
+#painel{max-height:620px;overflow:auto}
+#painel h3{margin:0 0 4px;font-size:15px}
+.leg{display:flex;flex-wrap:wrap;gap:14px;align-items:center;color:var(--ink2);font-size:12px;margin:8px 0 0}
+.leg i{display:inline-block;vertical-align:middle;margin-right:6px}
+.filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+input[type=search],select{background:var(--surface);color:var(--ink);border:1px solid var(--axis);border-radius:8px;padding:7px 10px;font:inherit}
+input[type=search]{min-width:240px}
+label.ck{color:var(--ink2);font-size:13px;display:flex;gap:6px;align-items:center}
+.btn{background:var(--surface);color:var(--ink);border:1px solid var(--axis);border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+.btn:hover{border-color:var(--ink2)}
+.tw{overflow:auto;max-height:640px;border:1px solid var(--ring);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-weight:600;cursor:pointer;white-space:nowrap;z-index:1}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:color-mix(in srgb,var(--s1) 8%,transparent)}
+tbody tr.sel{background:color-mix(in srgb,var(--hl) 14%,transparent)}
+.chip{display:inline-block;border:1px solid var(--axis);border-radius:6px;padding:0 6px;margin:1px 2px 1px 0;font-size:12px;white-space:nowrap}
+.chip.t{border-color:var(--s1);color:var(--ink)}
+.chip.p{border-style:dashed;color:var(--ink2)}
+.arrow{color:var(--muted);margin:0 2px}
+.muted{color:var(--muted)}
+.mais{margin:10px 0;text-align:center}
+.status{display:inline-flex;gap:4px;align-items:center;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:240px 1fr 70px;gap:10px;align-items:center;font-size:13px}
+.bar .t{height:10px;border-radius:0 4px 4px 0;background:var(--s1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.leaflet-container{background:var(--surface);font:inherit}
+.leaflet-tooltip{font:12px/1.4 system-ui,sans-serif}
+@media (max-width:900px){
+  header,main{padding-left:16px;padding-right:16px}
+  .mapwrap,.grid2{grid-template-columns:1fr}
+  #map{height:440px}
+  .bar{grid-template-columns:130px 1fr 56px}
+  input[type=search]{min-width:0;width:100%}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Inteligência de Malha</h1><div class="sub" id="periodo"></div></div>
+  <div class="sub" id="gerado"></div>
+</header>
+<main>
+  <section class="kpis" id="kpis"></section>
+  <nav id="nav">
+    <button data-t="mapa" class="on">Mapa da malha</button>
+    <button data-t="rotas">Rotas padrão</button>
+    <button data-t="troncos">Troncos</button>
+    <button data-t="pontas">Pontas e nós</button>
+    <button data-t="qualidade">Qualidade dos dados</button>
+  </nav>
+
+  <section class="tab on" id="t-mapa">
+    <div class="mapwrap">
+      <div>
+        <div id="map"></div>
+        <div class="leg">
+          <span><i style="width:26px;height:3px;background:var(--seq2)"></i>tronco (espessura e cor = viagens/mês)</span>
+          <span><i class="dot" style="background:var(--surface);border:2px solid var(--ink)"></i>bifurcação</span>
+          <span><i class="dot" style="background:var(--s2)"></i>ponto de acesso</span>
+          <span><i style="width:26px;height:0;border-top:3px dashed var(--hl)"></i>ponta (rota selecionada)</span>
+          <label class="ck"><input type="checkbox" id="ckCalor">fluxo bruto (todos os hexágonos)</label>
+          <label class="ck"><input type="checkbox" id="ckNos" checked>nós</label>
+        </div>
+      </div>
+      <div class="card" id="painel"><h3>Clique num tronco ou numa rota</h3>
+        <p class="muted">Troncos são trechos de estrada compartilhados por vários pares origem→destino. Cada rota é decomposta em <b>ponta de origem → troncos → ponta de destino</b>.</p></div>
+    </div>
+  </section>
+
+  <section class="tab" id="t-rotas">
+    <div class="filtros">
+      <input type="search" id="qR" placeholder="Buscar cidade, cliente, código de rota ou tronco">
+      <select id="ufO"><option value="">UF origem</option></select>
+      <select id="ufD"><option value="">UF destino</option></select>
+      <select id="cliR"><option value="">Cliente</option></select>
+      <label class="ck"><input type="checkbox" id="dupR">só pares com mais de 1 rota cadastrada</label>
+      <button class="btn" id="csvR">Exportar CSV</button>
+    </div>
+    <div class="sub" id="infoR" style="margin-bottom:8px"></div>
+    <div class="tw"><table id="tbR"></table></div>
+    <div class="mais"><button class="btn" id="maisR">Mostrar mais</button></div>
+  </section>
+
+  <section class="tab" id="t-troncos">
+    <div class="filtros">
+      <input type="search" id="qT" placeholder="Buscar tronco, cidade ou cliente">
+      <button class="btn" id="csvT">Exportar CSV</button>
+    </div>
+    <div class="tw"><table id="tbT"></table></div>
+  </section>
+
+  <section class="tab" id="t-pontas">
+    <div class="grid2">
+      <div>
+        <div class="filtros"><input type="search" id="qP" placeholder="Buscar cidade ou nó"><button class="btn" id="csvP">Exportar CSV</button></div>
+        <div class="tw"><table id="tbP"></table></div>
+      </div>
+      <div>
+        <div class="filtros"><input type="search" id="qN" placeholder="Buscar nó"><button class="btn" id="csvN">Exportar CSV</button></div>
+        <div class="tw"><table id="tbN"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" id="t-qualidade">
+    <div class="grid2">
+      <div class="card"><h3 style="margin-top:0">Fonte da trilha de cada viagem</h3><div class="bars" id="fontes"></div>
+        <h3>Por que a viagem não usou o GPS realizado</h3><div class="bars" id="motivos"></div>
+        <p class="muted" id="notaQ"></p></div>
+      <div class="card"><h3 style="margin-top:0">Placas sem GPS histórico no período <span class="muted" id="nSem"></span></h3>
+        <div class="filtros"><button class="btn" id="csvS">Exportar CSV</button></div>
+        <div class="tw" style="max-height:480px"><table id="tbS"></table></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const D = /*__DADOS__*/null;
+const fmt = n => n==null ? "–" : Number(n).toLocaleString("pt-BR");
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const K = D.kpi;
+const T = Object.fromEntries(D.troncos.map(t=>[t.codigo,t]));
+const N = Object.fromEntries(D.nos.map(n=>[n.id,n]));
+const cidade = s => (s||"").replace(/\/([A-Z]{2})$/," / $1");
+
+document.getElementById("periodo").textContent = `Período analisado: ${K.periodo} (${K.meses} meses) · ${fmt(K.viagens)} viagens`;
+document.getElementById("gerado").textContent = `Gerado em ${K.gerado_em}`;
+
+// ------------------------------------------------ KPIs
+const pct = (a,b) => b ? Math.round(100*a/b) : 0;
+const kpis = [
+  ["Rotas cadastradas usadas", fmt(K.rotas_cadastradas), "códigos de rota distintos no período"],
+  ["Rotas padrão propostas", fmt(K.pares_od), `−${pct(K.rotas_cadastradas-K.pares_od,K.rotas_cadastradas)}% · 1 por par cidade→cidade`],
+  ["Troncos", fmt(K.troncos), `${fmt(K.nos)} nós (bifurcações e acessos)`],
+  ["Pontas (origem + destino)", fmt(K.pontas_origem+K.pontas_destino), "cidade ↔ nó de entrada/saída do tronco"],
+  ["Viagens que usam tronco", pct(K.viagens_com_tronco,K.viagens)+"%", `${fmt(K.viagens_com_tronco)} de ${fmt(K.viagens)}`],
+  ["Viagens com GPS realizado", pct(K.viagens_gps,K.viagens)+"%", `demais: ${pct(K.viagens_plan,K.viagens)}% rota planejada, ${pct(K.viagens_sem_trilha,K.viagens)}% sem trilha`],
+];
+document.getElementById("kpis").innerHTML = kpis.map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join("");
+
+// ------------------------------------------------ abas
+document.getElementById("nav").onclick = e => {
+  const b = e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x.id==="t-"+b.dataset.t));
+  if(b.dataset.t==="mapa") setTimeout(()=>map.invalidateSize(),50);
+};
+function irMapa(){ document.querySelector('nav button[data-t="mapa"]').click(); }
+
+// ------------------------------------------------ mapa
+const map = L.map("map",{preferCanvas:true}).setView([-23.5,-50],5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:14,attribution:"© OpenStreetMap"}).addTo(map);
+const vmax = Math.max(...D.troncos.map(t=>t.viagens_mes),1);
+const passo = v => { const r=v/vmax; return r>.5?5:r>.25?4:r>.1?3:r>.04?2:1; };
+const corT = v => css("--seq"+passo(v));
+const larg = v => 1.5 + 7*Math.sqrt(v/vmax);
+const camT = L.layerGroup().addTo(map), camN = L.layerGroup().addTo(map), camH = L.layerGroup(), camSel = L.layerGroup().addTo(map);
+const linhas = {};
+const ord = [...D.troncos].sort((a,b)=>a.viagens-b.viagens);
+for(const t of ord){
+  const l = L.polyline(t.geo,{color:corT(t.viagens_mes),weight:larg(t.viagens_mes),opacity:.9,lineCap:"round"});
+  l.bindTooltip(`<b>${t.codigo}</b> ${t.nome}<br>${fmt(t.km)} km · ${fmt(t.viagens_mes)} viagens/mês · ${fmt(t.pares_od)} pares O/D`,{sticky:true});
+  l.on("click",()=>mostrarTronco(t.codigo));
+  l.addTo(camT); linhas[t.codigo]=l;
+}
+for(const n of D.nos){
+  if(n.tipo==="ponta de linha") continue;
+  const ac = n.tipo==="acesso";
+  L.circleMarker([n.lat,n.lng],{radius:ac?5:4,color:ac?css("--surface"):css("--ink"),weight:2,fillColor:ac?css("--s2"):css("--surface"),fillOpacity:1})
+   .bindTooltip(`<b>${n.id}</b> ${cidade(n.nome)}<br>${n.tipo} · ${fmt(n.acessos)} entradas/saídas`).addTo(camN);
+}
+const hmax = Math.max(...D.calor.map(h=>h[2]),1);
+for(const h of D.calor){
+  L.circleMarker([h[0],h[1]],{radius:2+4*Math.sqrt(h[2]/hmax),stroke:false,fillColor:css("--s7"),fillOpacity:.35})
+   .bindTooltip(`${fmt(h[2])} viagens · ${fmt(h[3])} pares O/D`).addTo(camH);
+}
+document.getElementById("ckCalor").onchange = e => e.target.checked ? camH.addTo(map) : map.removeLayer(camH);
+document.getElementById("ckNos").onchange = e => e.target.checked ? camN.addTo(map) : map.removeLayer(camN);
+try{ map.fitBounds(L.featureGroup(Object.values(linhas)).getBounds(),{padding:[10,10]}); }catch(e){}
+
+function chipsRota(r){
+  const p=[];
+  if(r.entrada) p.push(`<span class="chip p">${cidade(r.origem)} → ${r.entrada}</span>`); else p.push(`<span class="chip p">${cidade(r.origem)}</span>`);
+  for(const c of r.troncos) p.push(`<span class="chip t" title="${T[c]?T[c].nome:""}">${c}</span>`);
+  if(r.saida) p.push(`<span class="chip p">${r.saida} → ${cidade(r.destino)}</span>`); else p.push(`<span class="chip p">${cidade(r.destino)}</span>`);
+  return p.join('<span class="arrow">›</span>');
+}
+function lista(arr){ return (arr||[]).map(x=>`${x[0]||"(vazio)"} <span class="muted">(${fmt(x[1])})</span>`).join("<br>"); }
+
+function mostrarTronco(c){
+  const t=T[c]; camSel.clearLayers();
+  L.polyline(t.geo,{color:css("--hl"),weight:larg(t.viagens_mes)+4,opacity:.85}).addTo(camSel);
+  map.fitBounds(L.polyline(t.geo).getBounds(),{padding:[40,40],maxZoom:10});
+  const usa = D.rotas.filter(r=>r.troncos.includes(c)).slice(0,25);
+  document.getElementById("painel").innerHTML = `<h3>${t.codigo} · ${t.nome}</h3>
+   <div class="sub">${t.no_a} ${cidade(N[t.no_a]?.nome)} ↔ ${t.no_b} ${cidade(N[t.no_b]?.nome)}</div>
+   <p>${fmt(t.km)} km · <b>${fmt(t.viagens_mes)}</b> viagens/mês · ${fmt(t.pares_od)} pares O/D · ${fmt(t.rotas)} rotas cadastradas passam aqui</p>
+   <div class="sub">Principais clientes</div><p>${lista(t.clientes)}</p>
+   <div class="sub">Rotas padrão que usam este tronco (top ${usa.length})</div>
+   <table><tbody>${usa.map(r=>`<tr><td>${cidade(r.origem)} → ${cidade(r.destino)}</td><td class="n">${fmt(r.viagens_mes)}/mês</td></tr>`).join("")}</tbody></table>`;
+}
+function mostrarRota(r){
+  camSel.clearLayers(); const g=[];
+  for(const c of r.troncos){ const l=L.polyline(T[c].geo,{color:css("--hl"),weight:7,opacity:.85}).addTo(camSel); g.push(l); }
+  const o=r.o_ll, d=r.d_ll, ne=N[r.entrada], ns=N[r.saida];
+  const tr={color:css("--hl"),weight:3,dashArray:"6 6",opacity:.9};
+  if(o&&ne) L.polyline([o,[ne.lat,ne.lng]],tr).bindTooltip("Ponta de origem: "+cidade(r.origem)+" → "+r.entrada).addTo(camSel);
+  if(d&&ns) L.polyline([[ns.lat,ns.lng],d],tr).bindTooltip("Ponta de destino: "+r.saida+" → "+cidade(r.destino)).addTo(camSel);
+  if(o){ g.push(L.circleMarker(o,{radius:7,color:css("--ink"),weight:2,fillColor:css("--hl"),fillOpacity:1}).bindTooltip("Origem: "+cidade(r.origem)).addTo(camSel)); }
+  if(d){ g.push(L.circleMarker(d,{radius:7,color:css("--hl"),weight:3,fillColor:css("--surface"),fillOpacity:1}).bindTooltip("Destino: "+cidade(r.destino)).addTo(camSel)); }
+  if(g.length) map.fitBounds(L.featureGroup(g).getBounds(),{padding:[40,40],maxZoom:10});
+  document.getElementById("painel").innerHTML = `<h3>${cidade(r.origem)} → ${cidade(r.destino)}</h3>
+   <p>${chipsRota(r)}</p>
+   <p><b>${fmt(r.viagens_mes)}</b> viagens/mês · km planejado (mediana) ${fmt(r.km_plan)} · ${fmt(r.km_tronco)} km em tronco</p>
+   <p>Hoje: <b>${fmt(r.rotas_cadastradas)}</b> rota(s) cadastrada(s) para este par<br><span class="muted">${r.codigos_rota.slice(0,40).join(", ")}${r.codigos_rota.length>40?"…":""}</span></p>
+   <p>${r.pct_via_padrao==null?"Sem trilha para este par":`${r.pct_via_padrao}% das viagens seguem esta via (≥80% dos mesmos troncos)`}<br>
+   GPS realizado em ${r.pct_gps}% das viagens${r.aderencia_plan!=null?` · aderência ao planejado ${r.aderencia_plan}%`:""}</p>
+   <div class="sub">Clientes</div><p>${lista(r.clientes)}</p>
+   <div class="sub">Descrições cadastradas mais usadas</div><p class="muted">${lista(r.descricoes)}</p>`;
+}
+
+// ------------------------------------------------ tabela genérica
+function tabela(el, cols, rows, onclick, limite){
+  let sortK=null, sortD=-1, n=limite||1e9;
+  const tb=document.getElementById(el);
+  function draw(){
+    let rs=[...rows()];
+    if(sortK!=null){ const c=cols[sortK]; rs.sort((a,b)=>{const x=c.s?c.s(a):c.v(a), y=c.s?c.s(b):c.v(b); return (x>y?1:x<y?-1:0)*sortD;}); }
+    tb.innerHTML = `<thead><tr>${cols.map((c,i)=>`<th class="${c.n?"n":""}" data-i="${i}">${c.h}${sortK===i?(sortD>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
+      <tbody>${rs.slice(0,n).map((r,i)=>`<tr data-i="${i}">${cols.map(c=>`<td class="${c.n?"n":""}">${c.f?c.f(r):(c.n?fmt(c.v(r)):c.v(r)??"")}</td>`).join("")}</tr>`).join("")}</tbody>`;
+    tb.querySelector("thead").onclick=e=>{const th=e.target.closest("th"); if(!th)return; const i=+th.dataset.i; sortD = sortK===i ? -sortD : -1; sortK=i; draw();};
+    tb.querySelector("tbody").onclick=e=>{const tr=e.target.closest("tr"); if(!tr||!onclick)return; tb.querySelectorAll("tr.sel").forEach(x=>x.classList.remove("sel")); tr.classList.add("sel"); onclick(rs[+tr.dataset.i]);};
+    return rs.length;
+  }
+  return {draw, mais(){ n+=limite; return draw(); }, reset(){ n=limite||1e9; return draw(); }};
+}
+function csv(nome, cols, rows){
+  const esc = v => { v = v==null?"":String(v); return /[;"\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; };
+  const txt = "﻿"+[cols.map(c=>c[0]).join(";"), ...rows.map(r=>cols.map(c=>esc(c[1](r))).join(";"))].join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([txt],{type:"text/csv;charset=utf-8"})); a.download=nome; a.click();
+}
+const txtVia = r => [r.entrada?`${r.origem} > ${r.entrada}`:r.origem, ...r.troncos, r.saida?`${r.saida} > ${r.destino}`:r.destino].join(" | ");
+
+// ------------------------------------------------ rotas padrão
+const ufs = s => (s||"").slice(-2);
+const sel = (id, vals) => { const e=document.getElementById(id); e.innerHTML += [...vals].sort().map(v=>`<option>${v}</option>`).join(""); };
+sel("ufO", new Set(D.rotas.map(r=>ufs(r.origem)))); sel("ufD", new Set(D.rotas.map(r=>ufs(r.destino))));
+const clientes = new Map(); D.rotas.forEach(r=>r.clientes.forEach(c=>clientes.set(c[0],(clientes.get(c[0])||0)+c[1])));
+sel("cliR", [...clientes.entries()].filter(c=>c[1]>=20).map(c=>c[0]));
+function filtroR(){
+  const q=document.getElementById("qR").value.trim().toUpperCase(), o=ufO.value, d=ufD.value, c=cliR.value, dup=dupR.checked;
+  return D.rotas.filter(r=>(!o||ufs(r.origem)===o)&&(!d||ufs(r.destino)===d)&&(!dup||r.rotas_cadastradas>1)&&(!c||r.clientes.some(x=>x[0]===c))&&
+    (!q||(r.origem+" "+r.destino+" "+r.troncos.join(" ")+" "+r.codigos_rota.join(" ")+" "+r.clientes.map(x=>x[0]).join(" ")).toUpperCase().includes(q)));
+}
+const colsR=[
+  {h:"Origem",v:r=>cidade(r.origem)},{h:"Destino",v:r=>cidade(r.destino)},
+  {h:"Rota padrão (ponta › troncos › ponta)",v:r=>r.troncos.length,f:r=>r.troncos.length?chipsRota(r):'<span class="muted">sem tronco (rota local/curta)</span>'},
+  {h:"Viagens/mês",n:1,v:r=>r.viagens_mes},
+  {h:"Rotas cadastradas hoje",n:1,v:r=>r.rotas_cadastradas},
+  {h:"% na via padrão",n:1,v:r=>r.pct_via_padrao},
+  {h:"km plan.",n:1,v:r=>r.km_plan},
+  {h:"Cliente principal",v:r=>r.clientes[0]?r.clientes[0][0]:""},
+];
+const tR=tabela("tbR",colsR,filtroR,r=>{irMapa(); mostrarRota(r);},200);
+function drawR(fn){ const rs=filtroR(); const nCad=new Set(rs.flatMap(r=>r.codigos_rota)).size;
+  document.getElementById("infoR").textContent=`${fmt(rs.length)} pares origem→destino · ${fmt(nCad)} rotas cadastradas hoje cobrem esses pares · ${fmt(rs.reduce((s,r)=>s+r.viagens,0))} viagens`;
+  (fn||tR.reset)(); }
+["qR","ufO","ufD","cliR","dupR"].forEach(id=>document.getElementById(id).addEventListener("input",()=>drawR()));
+document.getElementById("maisR").onclick=()=>tR.mais();
+document.getElementById("csvR").onclick=()=>csv("rotas_padrao.csv",[["Origem",r=>r.origem],["Destino",r=>r.destino],["No entrada",r=>r.entrada],["Troncos",r=>r.troncos.join(" > ")],["No saida",r=>r.saida],["Rota padrao",txtVia],["Viagens",r=>r.viagens],["Viagens/mes",r=>String(r.viagens_mes).replace(".",",")],["Rotas cadastradas",r=>r.rotas_cadastradas],["Codigos de rota",r=>r.codigos_rota.join(", ")],["% via padrao",r=>r.pct_via_padrao],["km planejado",r=>r.km_plan],["km em tronco",r=>r.km_tronco],["% GPS",r=>r.pct_gps],["Aderencia planejado %",r=>r.aderencia_plan],["Clientes",r=>r.clientes.map(c=>c[0]).join(", ")]],filtroR());
+drawR();
+
+// ------------------------------------------------ troncos
+const filtroT=()=>{const q=qT.value.trim().toUpperCase(); return D.troncos.filter(t=>!q||(t.codigo+" "+t.nome+" "+t.clientes.map(c=>c[0]).join(" ")).toUpperCase().includes(q));};
+const colsT=[{h:"Código",v:t=>t.codigo,s:t=>+t.codigo.slice(1)},{h:"Tronco",v:t=>t.nome},{h:"Nós",v:t=>t.no_a+" ↔ "+t.no_b},
+  {h:"km",n:1,v:t=>t.km},{h:"Viagens/mês",n:1,v:t=>t.viagens_mes},{h:"Pares O/D",n:1,v:t=>t.pares_od},{h:"Rotas cadastradas que passam",n:1,v:t=>t.rotas},
+  {h:"Principais clientes",v:t=>t.clientes.slice(0,3).map(c=>c[0]).join(", ")}];
+const tT=tabela("tbT",colsT,filtroT,t=>{irMapa(); mostrarTronco(t.codigo);});
+tT.draw(); qT.oninput=()=>tT.draw();
+document.getElementById("csvT").onclick=()=>csv("troncos.csv",[["Codigo",t=>t.codigo],["Tronco",t=>t.nome],["No A",t=>t.no_a],["No B",t=>t.no_b],["km",t=>t.km],["Viagens",t=>t.viagens],["Viagens/mes",t=>t.viagens_mes],["Pares O/D",t=>t.pares_od],["Rotas cadastradas",t=>t.rotas],["Clientes",t=>t.clientes.map(c=>c[0]).join(", ")]],filtroT());
+
+// ------------------------------------------------ pontas e nós
+const filtroP=()=>{const q=qP.value.trim().toUpperCase(); return D.pontas.filter(p=>!q||(p.cidade+" "+p.no+" "+(N[p.no]?.nome||"")).toUpperCase().includes(q));};
+const colsP=[{h:"Tipo",v:p=>p.tipo},{h:"Cidade",v:p=>cidade(p.cidade)},{h:"Nó do tronco",v:p=>p.no+" "+cidade(N[p.no]?.nome)},{h:"Viagens",n:1,v:p=>p.viagens}];
+const tP=tabela("tbP",colsP,filtroP,p=>{const n=N[p.no]; if(n){irMapa(); map.setView([n.lat,n.lng],9);}});
+tP.draw(); qP.oninput=()=>tP.draw();
+document.getElementById("csvP").onclick=()=>csv("pontas.csv",[["Tipo",p=>p.tipo],["Cidade",p=>p.cidade],["No",p=>p.no],["Nome do no",p=>N[p.no]?.nome],["Viagens",p=>p.viagens]],filtroP());
+const filtroN=()=>{const q=qN.value.trim().toUpperCase(); return D.nos.filter(n=>!q||(n.id+" "+n.nome+" "+n.tipo).toUpperCase().includes(q));};
+const colsN=[{h:"Nó",v:n=>n.id,s:n=>+n.id.slice(1)},{h:"Local",v:n=>cidade(n.nome)},{h:"Tipo",v:n=>n.tipo},{h:"Entradas/saídas",n:1,v:n=>n.acessos}];
+const tN=tabela("tbN",colsN,filtroN,n=>{irMapa(); map.setView([n.lat,n.lng],9);});
+tN.draw(); qN.oninput=()=>tN.draw();
+document.getElementById("csvN").onclick=()=>csv("nos.csv",[["No",n=>n.id],["Local",n=>n.nome],["Tipo",n=>n.tipo],["Lat",n=>n.lat],["Lng",n=>n.lng],["Entradas/saidas",n=>n.acessos]],filtroN());
+
+// ------------------------------------------------ qualidade
+function barras(el, itens){
+  const m=Math.max(...itens.map(i=>i[1]),1);
+  document.getElementById(el).innerHTML=itens.map(i=>`<div class="bar"><span>${i[0]}</span><div class="t" style="width:${Math.max(2,100*i[1]/m)}%"></div><span class="n" style="text-align:right">${fmt(i[1])}</span></div>`).join("");
+}
+barras("fontes",[["GPS realizado",K.viagens_gps],["Rota planejada (sem GPS válido)",K.viagens_plan],["Sem trilha",K.viagens_sem_trilha]]);
+barras("motivos",Object.entries(K.motivos_sem_gps).sort((a,b)=>b[1]-a[1]));
+document.getElementById("notaQ").textContent="Quando o GPS realizado não é válido, a viagem entra na malha pela polilinha da rota planejada. Placas sem histórico e lançamentos com início = fim são os maiores ralos de dado.";
+const sem=K.placas_sem_gps_detalhe||K.placas_sem_gps.map(p=>({placa:p}));
+document.getElementById("nSem").textContent=`(${fmt(sem.length)} de ${fmt(K.placas)})`;
+const colsS=Object.keys(sem[0]||{placa:1}).map(k=>({h:k.replace(/_/g," "),v:r=>r[k],n:typeof (sem[0]||{})[k]==="number"}));
+tabela("tbS",colsS,()=>sem).draw();
+document.getElementById("csvS").onclick=()=>csv("placas_sem_gps.csv",Object.keys(sem[0]||{placa:1}).map(k=>[k,r=>r[k]]),sem);
+</script>
+</body>
+</html>

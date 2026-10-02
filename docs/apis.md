@@ -18,14 +18,14 @@ Todas respondem `{sucesso, dados, meta, request_id}`; erro vem em `erro.codigo/m
 - `camada_planejada.polilinha_encoded`: polilinha Google (precisão 5) da rota planejada, seguindo a estrada.
 - `camada_realizada`: janela da viagem, polilinha e `pontos_gps` (simplificados), `macros_eventos`.
 - `metricas_comparativo`: km planejado x realizado, desvio, tempo, % etapas/entregas.
-- 1 chamada por viagem (~1 s).
+- 1 chamada por viagem (~1 s). Algumas cargas devolvem 404 (página HTML) de forma consistente — tentar outra carga da mesma rota.
 
 ## 3. `autotrac/historico_posicoes.php` — GPS por veículo
 - Obrigatório: `placa` **ou** `rastreador`, `data_inicio`, `data_fim` (dia). `formato=lista`, `limite` (até 5000), `offset`.
 - `otimizar_polilinha=true` devolve `polilinha`, `pontos` simplificados e `paradas` (início/fim/duração).
 - Fontes: últimas ~71 h vêm da Autotrac direto (ponto a cada ~2 min, com velocidade e hodômetro);
   antes disso vem do banco histórico (ponto a cada ~15 min ≈ 16 km em rodovia, velocidade sempre 0, sem hodômetro).
-- Histórico começa entre jun e out/2024. Parte das placas não tem histórico gravado (ver relatório de cobertura).
+- Histórico começa entre jun e out/2024. Intervalo máximo por consulta: 31 dias. Parte das placas não tem histórico gravado (ver aba Qualidade do dashboard).
 
 ## 4. `autotrac/historico_macros.php?tipo=envio|retorno` — macros Autotrac
 - Obrigatório: `placa` ou `rastreador`. `retorno` = motorista → central (início/fim de jornada, refeição,
