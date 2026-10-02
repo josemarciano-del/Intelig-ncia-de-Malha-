@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,8 +21,9 @@
   --r: 10px; --r-sm: 7px;
   --font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-:root[data-theme="dark"]{
+:root{
   color-scheme: dark;
+  --water:#08090a; --land:#121417; --land-br:#15181c; --border:#2a2d33; --label:#5d626b;
   --bg:#08090a; --side:#0c0d0f; --s1:#111214; --s2:#16171a; --s3:#1c1d21; --line:#24262b; --line2:#2e3036;
   --ink:#f4f5f6; --ink2:#a9adb5; --muted:#7a7f88;
   --accent:#3987e5; --accent-soft:rgba(57,135,229,.14); --accent-ink:#8fc0f7;
@@ -32,8 +33,20 @@
   --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
   --glass: rgba(17,18,20,.78); --shadow: 0 12px 40px rgba(0,0,0,.45);
 }
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ 
+  color-scheme: light;
+  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#8a8f96;
+  --bg:#f6f6f4; --side:#fbfbfa; --s1:#ffffff; --s2:#f7f7f5; --s3:#efefec; --line:#e4e3de; --line2:#d6d5cf;
+  --ink:#0b0b0b; --ink2:#52514e; --muted:#7c7b76;
+  --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10); --accent-ink:#1c5cab;
+  --seq1:#86b6ef; --seq2:#5598e7; --seq3:#2a78d6; --seq4:#1c5cab; --seq5:#0d366b;
+  --c-gps:#2a78d6; --c-plan:#1baf7a; --c-none:#c3c2b7;
+  --hl:#eb6834; --hl-soft:rgba(235,104,52,.12);
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --glass: rgba(255,255,255,.86); --shadow: 0 12px 36px rgba(20,20,20,.12); } }
 :root[data-theme="light"]{
   color-scheme: light;
+  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#8a8f96;
   --bg:#f6f6f4; --side:#fbfbfa; --s1:#ffffff; --s2:#f7f7f5; --s3:#efefec; --line:#e4e3de; --line2:#d6d5cf;
   --ink:#0b0b0b; --ink2:#52514e; --muted:#7c7b76;
   --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10); --accent-ink:#1c5cab;
@@ -197,6 +210,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 @keyframes flow{to{stroke-dashoffset:-36}}
 .trunk{transition:opacity var(--d-mod) var(--ease-prod),stroke-width var(--d-fast)}
 .dim .trunk:not(.sel){opacity:.18}
+.uf{color:var(--label);font:600 10.5px var(--font);letter-spacing:.06em;text-align:center}
 
 /* esquema da rota: origem ● — T001 — T004 — ● destino */
 .pipe{display:flex;align-items:center;flex-wrap:wrap;gap:4px 0}
@@ -385,7 +399,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
           <select class="inp" id="cliR"><option value="">Todos os clientes</option></select>
           <label class="chk"><label class="switch"><input type="checkbox" id="dupR"><span></span></label>só com rota duplicada</label>
           <div style="flex:1"></div>
-          <button class="btn" id="csvR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Exportar CSV</button>
+          <button class="btn" id="csvR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar para Excel</button>
         </div>
         <p class="info" id="infoR"></p>
         <div class="tw"><table id="tbR"></table></div>
@@ -397,7 +411,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
         <div class="toolbar">
           <input class="inp" type="search" id="qT" placeholder="Filtrar tronco, cidade ou cliente">
           <div style="flex:1"></div>
-          <button class="btn" id="csvT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Exportar CSV</button>
+          <button class="btn" id="csvT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar para Excel</button>
         </div>
         <div class="tw"><table id="tbT"></table></div>
       </section>
@@ -407,12 +421,12 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
         <div class="grid g-2">
           <div>
             <div class="toolbar"><input class="inp" type="search" id="qP" placeholder="Filtrar pontas por cidade ou nó"><div style="flex:1"></div>
-              <button class="btn" id="csvP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>CSV</button></div>
+              <button class="btn" id="csvP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button></div>
             <div class="tw"><table id="tbP"></table></div>
           </div>
           <div>
             <div class="toolbar"><input class="inp" type="search" id="qN" placeholder="Filtrar nós"><div style="flex:1"></div>
-              <button class="btn" id="csvN"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>CSV</button></div>
+              <button class="btn" id="csvN"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button></div>
             <div class="tw"><table id="tbN"></table></div>
           </div>
         </div>
@@ -426,7 +440,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
             <p class="hint" style="margin:2px 0 0"><b>Fora da Autotrac</b>: não aparece nem no rastreamento ao vivo (outro rastreador / terceiro). <b>Autotrac, falha no histórico</b>: rastreia ao vivo, mas o banco histórico não gravou todos os meses.</p></div>
             <div style="flex:1"></div>
             <select class="inp" id="fSit"><option value="">Todas as situações</option></select>
-            <button class="btn" id="csvS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Exportar CSV</button></div>
+            <button class="btn" id="csvS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar para Excel</button></div>
           <div class="tw" style="max-height:520px;margin-top:10px"><table id="tbS"></table></div>
         </div>
       </section>
@@ -487,7 +501,8 @@ $("menu").onclick=()=>$("side").classList.toggle("open");
 // tema
 const temaSalvo = (()=>{ try{return localStorage.getItem("malha-tema")}catch(e){return null} })();
 if(temaSalvo) document.documentElement.dataset.theme=temaSalvo;
-$("theme").onclick=()=>{ const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+const temaAtual=()=>document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+$("theme").onclick=()=>{ const t=temaAtual()==="dark"?"light":"dark";
   document.documentElement.dataset.theme=t; try{localStorage.setItem("malha-tema",t)}catch(e){}; aplicarTemaMapa(); };
 
 // ------------------------------------------------ visão geral
@@ -530,13 +545,21 @@ animarGeral();
 // ------------------------------------------------ mapa
 const map = L.map("map",{zoomControl:false,attributionControl:true,zoomSnap:.25}).setView([-23.5,-50],5);
 L.control.zoom({position:"bottomright"}).addTo(map);
-// base cinza da Esri (sem chave de API): base + camada de nomes por cima dos troncos
-const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/", ATR="Base © Esri, HERE, Garmin, © OpenStreetMap";
+map.attributionControl.setPrefix("Contornos: Natural Earth · IBGE");
+// mapa base embutido: contorno dos países da América do Sul e das UFs (funciona sem internet)
+const BASE=/*__BASEMAP__*/null;
+map.createPane("base"); map.getPane("base").style.zIndex=200;
 map.createPane("rotulos"); map.getPane("rotulos").style.zIndex=450; map.getPane("rotulos").style.pointerEvents="none";
-const tiles={dark:L.layerGroup([L.tileLayer(ESRI+"World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:16,attribution:ATR}),
-                               L.tileLayer(ESRI+"World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{maxZoom:16,pane:"rotulos",opacity:.85})]),
-             light:L.layerGroup([L.tileLayer(ESRI+"World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:16,attribution:ATR}),
-                                L.tileLayer(ESRI+"World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{maxZoom:16,pane:"rotulos",opacity:.85})])};
+const baseR=L.canvas({pane:"base"});
+const camBase=L.layerGroup().addTo(map), camRot=L.layerGroup().addTo(map);
+function desenharBase(){
+  camBase.clearLayers(); camRot.clearLayers(); if(!BASE) return;
+  $("map").style.background=css("--water");
+  L.geoJSON(BASE.paises,{renderer:baseR,interactive:false,style:{color:css("--border"),weight:1,fillColor:css("--land"),fillOpacity:1}}).addTo(camBase);
+  L.geoJSON(BASE.ufs,{renderer:baseR,interactive:false,style:{color:css("--border"),weight:.8,fillColor:css("--land-br"),fillOpacity:1}}).addTo(camBase);
+  L.geoJSON(BASE.ufs,{interactive:false,pointToLayer:()=>null,onEachFeature:(f,l)=>{ const c=l.getBounds().getCenter();
+    L.marker(c,{pane:"rotulos",interactive:false,icon:L.divIcon({className:"uf",html:f.properties.n,iconSize:[30,14]})}).addTo(camRot); }});
+}
 const svgR=L.svg({padding:.5}), canR=L.canvas();
 const vmax=Math.max(...D.troncos.map(t=>t.viagens_mes),1);
 const passo=v=>{const r=v/vmax;return r>.5?5:r>.22?4:r>.08?3:r>.025?2:1;};
@@ -574,7 +597,7 @@ function desenharCalor(){
 }
 function nosVis(){ const on=$("ckNos").checked && map.getZoom()>=6.5; on?camN.addTo(map):map.removeLayer(camN); }
 function aplicarTemaMapa(){
-  const t=document.documentElement.dataset.theme; map.removeLayer(tiles.dark); map.removeLayer(tiles.light); tiles[t].addTo(map);
+  desenharBase();
   desenharTroncos(); desenharNos(); if(map.hasLayer(camH)) desenharCalor();
   $("ramp").innerHTML=[1,2,3,4,5].map(i=>`<i style="background:var(--seq${i})"></i>`).join("");
   if(selAtual) selAtual();
@@ -673,10 +696,13 @@ function tabela(el, cols, rows, onclick, limite){
   return {draw:()=>{n=limite||1e9;return draw();}, mais(){n+=limite;return draw(true);}};
 }
 function csv(nome, cols, rows){
-  const e=v=>{v=v==null?"":String(v);return /[;"\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v;};
-  const txt="﻿"+[cols.map(c=>c[0]).join(";"),...rows.map(r=>cols.map(c=>e(c[1](r))).join(";"))].join("\r\n");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([txt],{type:"text/csv;charset=utf-8"})); a.download=nome; a.click();
-  toast(`${fmt(rows.length)} linhas exportadas · ${nome}`);
+  // copia como tabela (TAB) para colar direto no Excel; se der, também baixa o .csv
+  const e=v=>String(v??"").replace(/[\t\n\r]/g," ");
+  const tsv=[cols.map(c=>c[0]).join("\t"),...rows.map(r=>cols.map(c=>e(c[1](r))).join("\t"))].join("\n");
+  const ok=()=>toast(`${fmt(rows.length)} linhas copiadas. Cole no Excel (Ctrl+V).`);
+  const alt=()=>{ const ta=document.createElement("textarea"); ta.value=tsv; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); ok(); }catch(x){ toast("Não consegui copiar. Selecione a tabela e copie."); } ta.remove(); };
+  try{ navigator.clipboard.writeText(tsv).then(ok,alt); }catch(x){ alt(); }
 }
 const bar=(v,m)=>`<span class="mini" style="width:${Math.max(3,46*v/m)}px"></span>`;
 
