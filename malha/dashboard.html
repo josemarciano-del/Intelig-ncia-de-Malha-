@@ -261,6 +261,54 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
 .badge i{width:7px;height:7px;border-radius:50%;display:inline-block}
 .more{display:flex;justify-content:center;margin:12px 0}
 
+/* ============================================================ planejador */
+.plan{display:grid;grid-template-columns:410px minmax(0,1fr);height:100%}
+.pl{border-right:1px solid var(--line);overflow:auto;padding:18px;background:var(--bg);display:flex;flex-direction:column;gap:16px}
+.pmapw{position:relative;min-height:0}
+#pmap{position:absolute;inset:0;background:var(--water)}
+#fPlan{display:flex;flex-direction:column;gap:10px;background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:14px;position:relative}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;display:flex;align-items:center;gap:7px}
+.dotO,.dotD{width:9px;height:9px;border-radius:50%;display:inline-block;border:2px solid var(--hl)}
+.dotO{background:var(--hl)}
+.ufc{display:grid;grid-template-columns:78px minmax(0,1fr);gap:6px}
+.ufc .inp{min-width:0;width:100%;max-width:none}
+.swap{position:absolute;right:14px;top:62px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line2);background:var(--s2);color:var(--ink2);cursor:pointer;display:grid;place-items:center;z-index:2;
+  transition:transform var(--d-mod) var(--ease-expr),color var(--d-fast),border-color var(--d-fast)}
+.swap:hover{color:var(--ink);border-color:var(--accent);transform:rotate(180deg)}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+.seg3 button{border:0;background:none;border-radius:6px;height:28px;cursor:pointer;color:var(--ink2);transition:background var(--d-mod) var(--ease-prod),color var(--d-fast)}
+.seg3 button.on{background:var(--s1);color:var(--ink);box-shadow:0 1px 0 var(--line2),0 0 0 1px var(--line)}
+.perr{margin:0;color:var(--crit);font-size:12.5px}
+.pempty{display:flex;flex-direction:column;gap:8px;align-items:flex-start;color:var(--ink2);padding:6px 4px}
+.pempty svg{color:var(--accent)}
+.pempty span{font-size:12.5px;line-height:1.55}
+.rcard{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:14px;animation:rise var(--d-slow) var(--ease-expr) both}
+.rcard+.rcard{margin-top:10px}
+.rhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rhead h3{margin:0;font-size:15px;letter-spacing:-.01em;line-height:1.3}
+.big{font-size:26px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.big small{font-size:12px;color:var(--muted);font-weight:500;margin-left:3px}
+.meter{height:8px;border-radius:4px;background:var(--s3);overflow:hidden;display:flex;gap:2px;margin:10px 0 6px}
+.meter i{display:block;height:100%;transition:width 900ms var(--ease-expr);width:0}
+.legs{display:grid;margin-top:12px;position:relative}
+.leg2{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;position:relative}
+.leg2::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--line2)}
+.leg2:first-child::before{top:14px}.leg2:last-child::before{bottom:calc(100% - 14px)}
+.leg2.tr::before{background:var(--accent)}
+.leg2 .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--s1);border:2px solid var(--line2);position:relative;z-index:1;font-size:9px;font-weight:700}
+.leg2.tr .ic{border-color:var(--accent);color:var(--accent-ink)}
+.leg2.pt .ic{border-color:var(--hl);border-style:dashed}
+.leg2 .tt2{font-size:12.8px;font-weight:500}
+.leg2 .sub{font-size:11.5px;color:var(--muted)}
+.leg2 .km{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:12px;line-height:1.5;color:var(--ink2);background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-top:10px;display:flex;gap:8px}
+.note b{color:var(--ink)}
+.note.ok{border-color:rgba(12,163,12,.35)}.note.warn{border-color:rgba(250,178,25,.45)}
+.code{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;word-break:break-word;color:var(--ink)}
+.alt{cursor:pointer;transition:border-color var(--d-fast)}
+.alt:hover{border-color:var(--accent)}
+
 /* ============================================================ command palette */
 .cmdk{position:fixed;inset:0;z-index:2000;display:grid;place-items:start center;padding-top:12vh;background:rgba(0,0,0,.45);
   opacity:0;pointer-events:none;transition:opacity var(--d-mod) var(--ease-prod)}
@@ -286,6 +334,8 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
   .g-2,.g-3{grid-template-columns:1fr}
 }
 @media (max-width:820px){
+  .plan{grid-template-columns:1fr;grid-template-rows:auto 380px;height:auto}
+  .pl{border-right:0;border-bottom:1px solid var(--line);overflow:visible}
   .app{grid-template-columns:1fr}
   .side{position:fixed;inset:0 auto 0 0;width:248px;z-index:1500;transform:translateX(-100%);transition:transform var(--d-slow) var(--ease-expr)}
   .side.open{transform:none;box-shadow:var(--shadow)}
@@ -315,6 +365,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
     <button class="nav on" data-v="geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Visão geral</button>
     <button class="nav" data-v="mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa da malha</button>
     <div class="navlbl">Padronização</div>
+    <button class="nav" data-v="planejar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10Z"/><circle cx="12" cy="11" r="2.2"/></svg>Planejar rota<span class="cnt" style="color:var(--accent-ink)">novo</span></button>
     <button class="nav" data-v="rotas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"/></svg>Rotas padrão<span class="cnt num" id="cR"></span></button>
     <button class="nav" data-v="troncos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20 20 4M4 4l6 6M14 14l6 6"/></svg>Troncos<span class="cnt num" id="cT"></span></button>
     <button class="nav" data-v="pontas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>Pontas e nós<span class="cnt num" id="cP"></span></button>
@@ -388,6 +439,31 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
             <button class="x" id="dClose" aria-label="Fechar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
           <div class="bd" id="dBody"></div>
         </aside>
+      </section>
+
+      <!-- ================================================== planejador -->
+      <section class="view full" id="v-planejar">
+        <div class="plan">
+          <div class="pl">
+            <form id="fPlan" autocomplete="off">
+              <div class="fld"><span class="lb"><i class="dotO"></i>Origem</span>
+                <div class="ufc"><select class="inp" id="pUfO" aria-label="UF de origem"></select><input class="inp" id="pCiO" list="dlO" placeholder="Cidade de origem" aria-label="Cidade de origem"></div></div>
+              <datalist id="dlO"></datalist>
+              <button type="button" class="swap" id="pSwap" title="Inverter origem e destino" aria-label="Inverter origem e destino"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></button>
+              <div class="fld"><span class="lb"><i class="dotD"></i>Destino</span>
+                <div class="ufc"><select class="inp" id="pUfD" aria-label="UF de destino"></select><input class="inp" id="pCiD" list="dlD" placeholder="Cidade de destino" aria-label="Cidade de destino"></div></div>
+              <datalist id="dlD"></datalist>
+              <div class="fld"><span class="lb">Prioridade ao tronco</span>
+                <div class="seg3" id="pPrio"><button type="button" data-p="1.25">Baixa</button><button type="button" data-p="1.7" class="on">Média</button><button type="button" data-p="2.4">Alta</button></div></div>
+              <button class="btn pri" type="submit" style="width:100%;justify-content:center;height:40px;margin-top:6px">Calcular melhor rota</button>
+              <p class="perr" id="pErr" hidden></p>
+            </form>
+            <div id="pRes"><div class="pempty"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"/></svg>
+              <b>Informe origem e destino</b><span>O planejador liga a cidade de origem ao tronco mais adequado, segue pelos troncos da malha e sai no nó mais próximo do destino.</span>
+              <span class="muted">Exemplo carregado: Chapecó/SC → Cajamar/SP.</span></div></div>
+          </div>
+          <div class="pmapw"><div id="pmap"></div></div>
+        </div>
       </section>
 
       <!-- ================================================== rotas -->
@@ -481,6 +557,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"
 $("foot").innerHTML = `Período <b style="color:var(--ink2)">${K.periodo.replace(" a "," → ")}</b><br>${fmt(K.viagens)} viagens · ${K.meses} meses<br>Gerado em ${K.gerado_em}`;
 $("cR").textContent=fmt(D.rotas.filter(r=>r.troncos.length).length); $("cT").textContent=fmt(D.troncos.length); $("cP").textContent=fmt(D.pontas.length);
 const TITULOS={geral:["Visão geral","Resumo da malha e do ganho de padronização"],mapa:["Mapa da malha","Troncos, nós e rotas sobre o mapa"],
+  planejar:["Planejar rota","Melhor rota pela malha de troncos"],
   rotas:["Rotas padrão","Ponta de origem › troncos › ponta de destino"],troncos:["Troncos","Corredores compartilhados por vários pares O/D"],
   pontas:["Pontas e nós","Acessos de cada cidade ao tronco"],qualidade:["Qualidade dos dados","Cobertura de GPS e pendências para a TI"]};
 let viewAtual="geral";
@@ -493,6 +570,7 @@ function ir(v){
   $("content").scrollTop=0; $("side").classList.remove("open");
   if(v==="mapa") setTimeout(()=>{ map.invalidateSize(); enquadrar(); },30);
   if(v==="geral") animarGeral();
+  if(v==="planejar") setTimeout(iniciarPlanejador,30);
 }
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>ir(b.dataset.v));
 $("crumb").textContent=TITULOS.geral[1];
@@ -503,7 +581,7 @@ const temaSalvo = (()=>{ try{return localStorage.getItem("malha-tema")}catch(e){
 if(temaSalvo) document.documentElement.dataset.theme=temaSalvo;
 const temaAtual=()=>document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
 $("theme").onclick=()=>{ const t=temaAtual()==="dark"?"light":"dark";
-  document.documentElement.dataset.theme=t; try{localStorage.setItem("malha-tema",t)}catch(e){}; aplicarTemaMapa(); };
+  document.documentElement.dataset.theme=t; try{localStorage.setItem("malha-tema",t)}catch(e){}; aplicarTemaMapa(); if(typeof redesenharPlan==="function") redesenharPlan(); };
 
 // ------------------------------------------------ visão geral
 const nTronco = D.rotas.filter(r=>r.troncos.length).length;
@@ -814,6 +892,188 @@ document.addEventListener("keydown",e=>{
   else if(e.key==="ArrowUp"){e.preventDefault();kSel=Math.max(kSel-1,0);kRender();}
   else if(e.key==="Enter"){e.preventDefault();kGo(kSel);}
 });
+
+// ================================================== planejador de rotas
+// Custo = km em tronco + km de ponta x peso (prioridade ao tronco) + penalidade por troca de tronco.
+// Pontas são estimadas em linha reta x 1,25 (fator de estrada). Pontas já praticadas no histórico ganham desconto.
+const CID = /*__CIDADES__*/null;
+const FATOR_ESTRADA=1.25, TROCA_KM=25, RAIO_PONTA=220, DESC_PRATICADA=.8;
+let pesoPonta=1.7, FATOR_KM=1, pmap=null, pCamT, pCamSel, pBase, planAtual=null;
+const kmLL=(a,b)=>{const R=6371,r=Math.PI/180,dl=(b[0]-a[0])*r,dg=(b[1]-a[1])*r,h=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+const nrm=s=>(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().trim();
+// grafo: arestas entre nós consecutivos ao longo de cada tronco
+const ADJ={};
+for(const t of D.troncos){ const L2=t.nos_lin||[];
+  for(let i=0;i<L2.length-1;i++){ const [a,ka,ia]=L2[i],[b,kb,ib]=L2[i+1]; const k=Math.max(.5,kb-ka);
+    const f=t.viagens_mes>=20?1:1.1;
+    (ADJ[a]=ADJ[a]||[]).push({to:b,km:k,c:k*f,t:t.codigo,ia,ib}); (ADJ[b]=ADJ[b]||[]).push({to:a,km:k,c:k*f,t:t.codigo,ia:ib,ib:ia}); } }
+const NOS_G=D.nos.filter(n=>ADJ[n.id]);
+const pontasPrat={o:{},d:{}};
+for(const p of D.pontas){ const m=p.tipo==="origem"?pontasPrat.o:pontasPrat.d; (m[nrm(p.cidade)]=m[nrm(p.cidade)]||{})[p.no]=p.viagens; }
+const ROTA_PAR={}; D.rotas.forEach(r=>ROTA_PAR[nrm(r.origem)+">"+nrm(r.destino)]=r);
+const CID_UF={}; CID.forEach(c=>(CID_UF[c[1]]=CID_UF[c[1]]||[]).push(c));
+function acharCidade(uf,nome){ const n=nrm(nome); return (CID_UF[uf]||[]).find(c=>nrm(c[0])===n) || (CID_UF[uf]||[]).find(c=>nrm(c[0]).startsWith(n)); }
+
+function candidatos(ll,chave,tipo){
+  const prat=(tipo==="o"?pontasPrat.o:pontasPrat.d)[chave]||{};
+  const lst=NOS_G.map(n=>({n:n.id,d:kmLL(ll,[n.lat,n.lng])})).filter(x=>x.d<=RAIO_PONTA||prat[x.n]).sort((a,b)=>a.d-b.d).slice(0,14);
+  for(const id in prat) if(!lst.some(x=>x.n===id)&&N[id]&&ADJ[id]) lst.push({n:id,d:kmLL(ll,[N[id].lat,N[id].lng])});
+  return lst.map(x=>({n:x.n,km:x.d*FATOR_ESTRADA,prat:!!prat[x.n],c:x.d*FATOR_ESTRADA*pesoPonta*(prat[x.n]?DESC_PRATICADA:1)}));
+}
+function dijkstra(oC,dC,penal){
+  const dist=new Map(), prev=new Map(), heap=[];
+  const push=(c,k)=>{heap.push([c,k]);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p][0]<=heap[i][0])break;[heap[p],heap[i]]=[heap[i],heap[p]];i=p;}};
+  const pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){let l=2*i+1,r=l+1,m=i;if(l<heap.length&&heap[l][0]<heap[m][0])m=l;if(r<heap.length&&heap[r][0]<heap[m][0])m=r;if(m===i)break;[heap[m],heap[i]]=[heap[i],heap[m]];i=m;}}return top;};
+  const dFim=Object.fromEntries(dC.map(x=>[x.n,x]));
+  for(const o of oC){ const k=o.n+"|"; if(!(dist.get(k)<=o.c)){dist.set(k,o.c);prev.set(k,{ini:o});push(o.c,k);} }
+  let best=null;
+  while(heap.length){
+    const [c,k]=pop(); if(c>dist.get(k)) continue; if(best&&c>=best.c) break;
+    const [n,lt]=k.split("|");
+    if(dFim[n]){ const tot=c+dFim[n].c; if(!best||tot<best.c) best={c:tot,k,fim:dFim[n]}; }
+    for(const e of ADJ[n]||[]){
+      const nc=c+e.c*(penal&&penal[e.t]?penal[e.t]:1)+(lt&&lt!==e.t?TROCA_KM:0), nk=e.to+"|"+e.t;
+      if(!(dist.get(nk)<=nc)){dist.set(nk,nc);prev.set(nk,{k,e});push(nc,nk);}
+    }
+  }
+  if(!best) return null;
+  const edges=[]; let k=best.k, ini=null;
+  while(prev.has(k)){ const p=prev.get(k); if(p.ini){ini=p.ini;break;} edges.unshift(p.e); k=p.k; }
+  // agrupa arestas consecutivas do mesmo tronco
+  const segs=[]; let noAt=ini.n;
+  for(const e of edges){ const s=segs[segs.length-1];
+    if(s&&s.t===e.t){ s.b=e.to; s.ib=e.ib; s.km+=e.km; } else segs.push({t:e.t,a:noAt,b:e.to,ia:e.ia,ib:e.ib,km:e.km}); noAt=e.to; }
+  return {ini,fim:best.fim,segs,custo:best.c};
+}
+function planejar(o,d){
+  const oll=[o[2],o[3]], dll=[d[2],d[3]], ko=nrm(o[0]+"/"+o[1]), kd=nrm(d[0]+"/"+d[1]);
+  const dir=kmLL(oll,dll)*FATOR_ESTRADA;
+  const oC=candidatos(oll,ko,"o"), dC=candidatos(dll,kd,"d");
+  const r1=dijkstra(oC,dC);
+  const custoDireto=dir*pesoPonta;
+  let res={o,d,oll,dll,dir,hist:ROTA_PAR[ko+">"+kd]||null};
+  if(!r1||r1.segs.length===0||custoDireto<=r1.custo){ res.local=true; }
+  if(r1&&r1.segs.length){
+    res.best=r1;
+    const pen={}; r1.segs.forEach(s=>pen[s.t]=3);
+    const r2=dijkstra(oC,dC,pen);
+    if(r2&&r2.segs.length&&r2.segs.map(s=>s.t).join()!==r1.segs.map(s=>s.t).join()) res.alt=r2;
+  }
+  return res;
+}
+const kmTot=r=>r.ini.km+r.fim.km+r.segs.reduce((s,x)=>s+x.km,0);
+const kmE=k=>fmt(Math.round(k*FATOR_KM));  // km exibido, já calibrado
+const kmTr=r=>r.segs.reduce((s,x)=>s+x.km,0);
+function comoRota(res,r){ return {origem:res.o[0]+"/"+res.o[1],destino:res.d[0]+"/"+res.d[1],entrada:r.ini.n,saida:r.fim.n,troncos:r.segs.map(s=>s.t)}; }
+function nomePadrao(res,r){ const o=nrm(res.o[0])+"/"+res.o[1], d=nrm(res.d[0])+"/"+res.d[1];
+  return r?`${o} > ${r.ini.n} > ${r.segs.map(s=>s.t).join(" > ")} > ${r.fim.n} > ${d}`:`${o} > ${d} (local)`; }
+
+// calibra o km da malha contra o km planejado dos cadastros reais (mediana de até 250 pares)
+function calibrar(){
+  const rs=[]; let n=0; const p0=pesoPonta; pesoPonta=1.7;
+  for(const r of D.rotas){ if(!r.troncos.length||r.km_plan<150||!r.o_ll||!r.d_ll) continue; if(n++>250) break;
+    const res=planejar(["","",r.o_ll[0],r.o_ll[1]],["","",r.d_ll[0],r.d_ll[1]]); if(res.best) rs.push(r.km_plan/kmTot(res.best)); }
+  pesoPonta=p0; rs.sort((a,b)=>a-b); FATOR_KM=rs.length>30?Math.min(1.3,Math.max(1,rs[rs.length>>1])):1;
+}
+function iniciarPlanejador(){
+  if(pmap){ pmap.invalidateSize(); return; }
+  calibrar();
+  pmap=L.map("pmap",{zoomControl:false,zoomSnap:.25}).setView([-23.5,-50],5);
+  L.control.zoom({position:"bottomright"}).addTo(pmap); pmap.attributionControl.setPrefix("Contornos: Natural Earth · IBGE");
+  pmap.createPane("base"); pmap.getPane("base").style.zIndex=200;
+  pBase=L.layerGroup().addTo(pmap); pCamT=L.layerGroup().addTo(pmap); pCamSel=L.layerGroup().addTo(pmap);
+  redesenharPlan();
+  try{ pmap.fitBounds(L.featureGroup(pCamT.getLayers()).getBounds(),{padding:[20,20]}); }catch(e){}
+  if(!planAtual) calcular();
+}
+function redesenharPlan(){
+  if(!pmap) return;
+  pBase.clearLayers(); pCamT.clearLayers(); $("pmap").style.background=css("--water");
+  const br=L.canvas({pane:"base"});
+  L.geoJSON(BASE.paises,{renderer:br,interactive:false,style:{color:css("--border"),weight:1,fillColor:css("--land"),fillOpacity:1}}).addTo(pBase);
+  L.geoJSON(BASE.ufs,{renderer:br,interactive:false,style:{color:css("--border"),weight:.8,fillColor:css("--land-br"),fillOpacity:1}}).addTo(pBase);
+  for(const t of D.troncos) L.polyline(t.geo,{renderer:svgR,color:css("--seq"+passo(t.viagens_mes)),weight:1+3*Math.sqrt(t.viagens_mes/vmax),opacity:.45,interactive:false}).addTo(pCamT);
+  if(planAtual) desenharPlano(planAtual.res, planAtual.r, false);
+}
+function desenharPlano(res,r,voa=true){
+  pmap.invalidateSize(); pCamSel.clearLayers(); const hl=css("--hl"), g=[];
+  const tr={renderer:svgR,color:hl,weight:3,dashArray:"5 7",opacity:.95};
+  if(r){
+    for(const s of r.segs){ const geo=T[s.t].geo, a=Math.min(s.ia,s.ib), b=Math.max(s.ia,s.ib), part=geo.slice(a,b+1);
+      g.push(L.polyline(part,{renderer:svgR,color:hl,weight:6,opacity:.92,lineCap:"round"}).bindTooltip(`<b>${s.t}</b> · ${esc(T[s.t].nome)}<br>${s.a} → ${s.b} · ${kmE(s.km)} km`,{className:"tt",sticky:true}).addTo(pCamSel));
+      L.polyline(part,{renderer:svgR,color:"#fff",weight:2,opacity:.85,className:"flow",interactive:false}).addTo(pCamSel); }
+    const ne=N[r.ini.n], ns=N[r.fim.n];
+    g.push(L.polyline([res.oll,[ne.lat,ne.lng]],tr).bindTooltip("Ponta de origem",{className:"tt"}).addTo(pCamSel));
+    g.push(L.polyline([[ns.lat,ns.lng],res.dll],tr).bindTooltip("Ponta de destino",{className:"tt"}).addTo(pCamSel));
+    for(const n of [ne,ns]) L.circleMarker([n.lat,n.lng],{renderer:svgR,radius:5,color:css("--s1"),weight:2,fillColor:css("--accent"),fillOpacity:1}).bindTooltip(`${n.id} · ${esc(cid(n.nome))}`,{className:"tt"}).addTo(pCamSel);
+  } else g.push(L.polyline([res.oll,res.dll],tr).addTo(pCamSel));
+  g.push(L.circleMarker(res.oll,{renderer:svgR,radius:8,color:css("--s1"),weight:2,fillColor:hl,fillOpacity:1}).bindTooltip("Origem: "+esc(res.o[0]),{className:"tt"}).addTo(pCamSel));
+  g.push(L.circleMarker(res.dll,{renderer:svgR,radius:8,color:hl,weight:3,fillColor:css("--s1"),fillOpacity:1}).bindTooltip("Destino: "+esc(res.d[0]),{className:"tt"}).addTo(pCamSel));
+  if(voa){ const b=L.featureGroup(g).getBounds(), o={padding:[50,50],maxZoom:10}; RM?pmap.fitBounds(b,o):pmap.flyToBounds(b,{...o,duration:1,easeLinearity:.2}); }
+}
+function htmlRota(res,r,titulo,alt){
+  const tot=kmTot(r), ktr=kmTr(r), pt=pct(ktr,tot), desvio=Math.max(0,Math.round(100*(tot*FATOR_KM/(res.dir/FATOR_ESTRADA)-1)));
+  const legs=[`<div class="leg2 pt"><span class="ic"></span><div><div class="tt2">${esc(res.o[0])}/${res.o[1]} → ${r.ini.n}</div><div class="sub">Ponta de origem até ${esc(cid(N[r.ini.n].nome))}${r.ini.prat?" · já praticada no histórico":""}</div></div><span class="km">~${kmE(r.ini.km)} km</span></div>`,
+    ...r.segs.map(s=>`<div class="leg2 tr"><span class="ic">T</span><div><div class="tt2"><span class="pipe" style="display:inline-flex"><span class="t" data-t="${s.t}">${s.t}</span></span> ${esc(T[s.t].nome.split(" (")[0])}</div><div class="sub">${s.a} ${esc(cid(N[s.a]?.nome))} → ${s.b} ${esc(cid(N[s.b]?.nome))} · ${fmt(T[s.t].viagens_mes)} viagens/mês no tronco</div></div><span class="km">${kmE(s.km)} km</span></div>`),
+    `<div class="leg2 pt"><span class="ic"></span><div><div class="tt2">${r.fim.n} → ${esc(res.d[0])}/${res.d[1]}</div><div class="sub">Ponta de destino a partir de ${esc(cid(N[r.fim.n].nome))}${r.fim.prat?" · já praticada no histórico":""}</div></div><span class="km">~${kmE(r.fim.km)} km</span></div>`];
+  return `<div class="rcard ${alt?"alt":""}" ${alt?'id="pAlt"':""}>
+    <div class="rhead"><div><div class="lb" style="margin-bottom:4px">${titulo}</div><h3>${esc(res.o[0])}/${res.o[1]} → ${esc(res.d[0])}/${res.d[1]}</h3></div><div class="big">~${kmE(tot)}<small>km</small></div></div>
+    <div class="meter"><i data-w="${pt}" style="background:var(--accent)"></i><i data-w="${100-pt}" style="background:var(--hl)"></i></div>
+    <div class="legend" style="margin-top:0"><span><i class="sw" style="background:var(--accent)"></i>${pt}% em tronco (${kmE(ktr)} km)</span><span><i class="sw" style="background:var(--hl)"></i>pontas ~${kmE(tot-ktr)} km</span><span class="muted">${desvio}% acima da linha reta</span></div>
+    ${alt?"":`<div class="legs">${legs.join("")}</div><p class="muted" style="font-size:11.5px;margin:8px 0 0">km estimado: troncos pelo traçado da malha, pontas em linha reta × 1,25, tudo calibrado pelo km planejado dos cadastros (× ${FATOR_KM.toFixed(2).replace(".",",")}).</p>`}
+  </div>`;
+}
+function mostrarResultado(res){
+  let out="";
+  const r=res.best;
+  if(r){
+    out+=htmlRota(res,r,res.local?"Rota pela malha (comparativo)":"Melhor rota pela malha",false);
+    out+=`<div class="rcard"><div class="lb">Cadastro padronizado sugerido</div><div class="code" id="pNome" style="margin-top:8px">${esc(nomePadrao(res,r))}</div>
+      <button class="btn" id="pCopy" type="button" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button>`;
+    const hst=res.hist;
+    if(hst&&hst.troncos.length){ const igual=hst.troncos.join()===r.segs.map(s=>s.t).join();
+      out+=`<div class="note ${igual?"ok":"warn"}"><span>${igual?"✓":"!"}</span><span>${igual?`<b>Confere com o histórico.</b> Este par já roda ${fmt1(hst.viagens_mes)} viagens/mês pela mesma via`:`<b>O histórico usa outra via:</b> ${hst.troncos.join(" > ")} (${fmt1(hst.viagens_mes)} viagens/mês, ${hst.pct_via_padrao??"–"}% das viagens). Compare antes de cadastrar`}. Hoje há <b>${hst.rotas_cadastradas}</b> rota(s) cadastrada(s) para este par: ${hst.codigos_rota.slice(0,12).join(", ")}${hst.codigos_rota.length>12?"…":""}.</span></div>`;
+    } else if(hst) out+=`<div class="note"><span>i</span><span>Par já operado (${fmt1(hst.viagens_mes)} viagens/mês) sem passar por tronco. Rotas cadastradas hoje: ${hst.codigos_rota.slice(0,12).join(", ")}.</span></div>`;
+    else out+=`<div class="note"><span>i</span><span><b>Par novo:</b> não há viagens deste par cidade → cidade no período analisado.</span></div>`;
+    if(res.local) out+=`<div class="note warn"><span>!</span><span><b>Ligação local:</b> a ida direta (~${kmE(res.dir)} km) sai mais barata que entrar na malha. Use a rota pela malha só se a operação quiser padronizar por tronco.</span></div>`;
+    out+=`</div>`;
+    if(res.alt) out+=htmlRota(res,res.alt,"Alternativa (troncos diferentes) · clique para ver",true);
+  } else {
+    out+=`<div class="rcard"><div class="lb">Resultado</div><h3 style="margin:6px 0">Sem tronco na região</h3><p class="muted" style="margin:0;font-size:12.5px">Nenhum nó da malha num raio de ${RAIO_PONTA} km da origem ou do destino. Rota direta estimada: ~${kmE(res.dir)} km.</p></div>`;
+  }
+  $("pRes").innerHTML=out;
+  crescer($("pRes"));
+  $("pRes").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>abrirTronco(b.dataset.t));
+  $("pCopy")&&($("pCopy").onclick=()=>{ const t=$("pNome").textContent;
+    const ok=()=>toast("Cadastro copiado."); try{navigator.clipboard.writeText(t).then(ok,()=>{selecionar($("pNome"));toast("Selecionei o texto: use Ctrl+C.");});}catch(e){selecionar($("pNome"));} });
+  $("pAlt")&&($("pAlt").onclick=()=>{ const tmp=res.best; res.best=res.alt; res.alt=tmp; planAtual={res,r:res.best}; mostrarResultado(res); desenharPlano(res,res.best); });
+  planAtual={res,r:r||null};
+  desenharPlano(res,r||null);
+}
+function selecionar(el){ const s=getSelection(), rg=document.createRange(); rg.selectNodeContents(el); s.removeAllRanges(); s.addRange(rg); }
+function calcular(){
+  const o=acharCidade($("pUfO").value,$("pCiO").value), d=acharCidade($("pUfD").value,$("pCiD").value);
+  const err=$("pErr");
+  if(!o||!d){ err.hidden=false; err.textContent=!o?"Cidade de origem não encontrada nessa UF. Escolha uma da lista.":"Cidade de destino não encontrada nessa UF. Escolha uma da lista."; return; }
+  if(o===d){ err.hidden=false; err.textContent="Origem e destino são a mesma cidade."; return; }
+  err.hidden=true; $("pCiO").value=o[0]; $("pCiD").value=d[0];
+  if(!pmap) iniciarPlanejador();
+  mostrarResultado(planejar(o,d));
+}
+// formulário
+(function(){
+  const ufs=Object.keys(CID_UF).sort((a,b)=>a==="EX"?1:b==="EX"?-1:a.localeCompare(b));
+  for(const id of ["pUfO","pUfD"]) $(id).innerHTML=ufs.map(u=>`<option value="${u}">${u==="EX"?"Ext.":u}</option>`).join("");
+  const preencher=(sel,dl)=>{ $(dl).innerHTML=(CID_UF[$(sel).value]||[]).map(c=>`<option value="${esc(c[0])}">`).join(""); };
+  $("pUfO").onchange=()=>{preencher("pUfO","dlO");$("pCiO").value="";$("pCiO").focus();};
+  $("pUfD").onchange=()=>{preencher("pUfD","dlD");$("pCiD").value="";$("pCiD").focus();};
+  $("pUfO").value="SC"; $("pUfD").value="SP"; preencher("pUfO","dlO"); preencher("pUfD","dlD");
+  $("pCiO").value="Chapecó"; $("pCiD").value="Cajamar";
+  $("fPlan").onsubmit=e=>{e.preventDefault();calcular();};
+  $("pSwap").onclick=()=>{ const u=$("pUfO").value,c=$("pCiO").value; $("pUfO").value=$("pUfD").value; $("pUfD").value=u; preencher("pUfO","dlO"); preencher("pUfD","dlD");
+    $("pCiO").value=$("pCiD").value; $("pCiD").value=c; if(planAtual) calcular(); };
+  $("pPrio").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; $("pPrio").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); pesoPonta=+b.dataset.p; if(planAtual) calcular(); };
+})();
 </script>
 </body>
 </html>

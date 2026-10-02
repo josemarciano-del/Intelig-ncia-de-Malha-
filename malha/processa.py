@@ -399,6 +399,9 @@ def percorrer(cells, cell_seg):
 
 
 def main():
+    # resultado determinístico: a ordem de sets/dicts de strings depende do hash; sem isso os códigos T/N mudam a cada rodada
+    if os.environ.get("PYTHONHASHSEED") != "0":
+        os.execve(sys.executable, [sys.executable, "-m", "malha.processa", *sys.argv[1:]], {**os.environ, "PYTHONHASHSEED": "0"})
     ini, fim = sys.argv[1], sys.argv[2]
     ms = list(meses(ini, fim))
     vs = carregar_viagens(ini, fim)
@@ -500,7 +503,12 @@ def main():
     T = []
     for i, t in enumerate(trechos):
         ll = suavizar([h3.cell_to_latlng(c) for c in t])
-        T.append(dict(id=i, a=nome_no.get(t[0], "?"), b=nome_no.get(t[-1], "?"),
+        acum = [0.0]
+        for p, q in zip(ll, ll[1:]):
+            acum.append(acum[-1] + km(p, q))
+        # nós ao longo do corredor: [nó, km desde a ponta A, índice na geometria] (usado pelo planejador)
+        ao_longo = [[c, round(acum[k], 1), k] for k, c in enumerate(t) if c in nos]
+        T.append(dict(nos_lin=ao_longo,id=i, a=nome_no.get(t[0], "?"), b=nome_no.get(t[-1], "?"),
                       no_a=t[0], no_b=t[-1],
                       km=round(sum(km(p, q) for p, q in zip(ll, ll[1:]))),
                       viagens=tr_v[i], viagens_mes=round(tr_v[i] / n_meses), pares_od=len(tr_od[i]),
@@ -592,6 +600,7 @@ def main():
     out = dict(kpi=kpi, troncos=T, nos=N, rotas=R, pontas=P, calor=H)
     for t in T:
         t["no_a"], t["no_b"] = nid[t["no_a"]], nid[t["no_b"]]
+        t["nos_lin"] = [[nid[c], d, k] for c, d, k in t["nos_lin"]]
     for n in N:
         n["id"] = n.pop("codigo")
     salvar(out, os.path.join(SAIDA, "malha.json.gz"))
