@@ -306,7 +306,24 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
 .note b{color:var(--ink)}
 .note.ok{border-color:rgba(12,163,12,.35)}.note.warn{border-color:rgba(250,178,25,.45)}
 .code{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;word-break:break-word;color:var(--ink)}
-.alt{cursor:pointer;transition:border-color var(--d-fast)}
+.opcs{display:grid;gap:8px}
+.opc{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--s1);cursor:pointer;transition:border-color var(--d-fast) var(--ease-prod),background var(--d-mod) var(--ease-prod);animation:rise var(--d-slow) var(--ease-expr) both}
+.opc:hover{border-color:var(--line2)}
+.opc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opc.on{border-color:var(--hl);background:color-mix(in srgb,var(--hl) 7%,var(--s1))}
+.opc .rd{width:16px;height:16px;border-radius:50%;border:2px solid var(--line2);margin-top:2px;position:relative;transition:border-color var(--d-fast)}
+.opc.on .rd{border-color:var(--hl)}
+.opc.on .rd::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--hl)}
+.opc .t1{font-weight:600;font-size:13px;display:flex;align-items:center}
+.opc .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.opc .chips .pipe .t{cursor:default}
+.opc .kmv{font-size:18px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;line-height:1.2}
+.opc .kmv small{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.tag2{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--hl-soft);color:var(--hl);margin-left:7px}
+.leaflet-tooltip.tlabel{background:var(--hl);color:#fff;border:0;border-radius:6px;padding:1px 7px;font:700 11px var(--font);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.leaflet-tooltip.olabel{background:var(--s2);color:var(--ink2);border:1px solid var(--line2);border-radius:6px;padding:1px 7px;font:600 11px var(--font)}
+.leaflet-tooltip.tlabel::before,.leaflet-tooltip.olabel::before{display:none}
 .alt:hover{border-color:var(--accent)}
 
 /* ============================================================ command palette */
@@ -462,7 +479,12 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
               <b>Informe origem e destino</b><span>O planejador liga a cidade de origem ao tronco mais adequado, segue pelos troncos da malha e sai no nó mais próximo do destino.</span>
               <span class="muted">Exemplo carregado: Chapecó/SC → Cajamar/SP.</span></div></div>
           </div>
-          <div class="pmapw"><div id="pmap"></div></div>
+          <div class="pmapw"><div id="pmap"></div>
+            <div class="float leg" style="left:12px;bottom:12px">
+              <div class="r"><i style="width:24px;height:4px;border-radius:2px;background:var(--hl);display:inline-block"></i>opção selecionada</div>
+              <div class="r" id="pLegOut"><i style="width:24px;height:4px;border-radius:2px;background:var(--muted);opacity:.7;display:inline-block"></i>outras opções (clique para ver)</div>
+              <div class="r"><i style="width:24px;height:0;border-top:3px dashed var(--hl);display:inline-block"></i>ponta (acesso à malha)</div>
+            </div></div>
         </div>
       </section>
 
@@ -902,7 +924,7 @@ document.addEventListener("keydown",e=>{
 // Pontas são estimadas em linha reta x 1,25 (fator de estrada). Pontas já praticadas no histórico ganham desconto.
 const CID = /*__CIDADES__*/null;
 const FATOR_ESTRADA=K.fator_ponta||1.3, TROCA_KM=25, RAIO_PONTA=220, DESC_PRATICADA=.8;
-let pesoPonta=1.7, FATOR_KM=1, pmap=null, pCamT, pCamSel, pBase, planAtual=null;
+let pesoPonta=1.7, FATOR_KM=1, pmap=null, pSvg=null, pCamSel, pBase, planAtual=null;
 const kmLL=(a,b)=>{const R=6371,r=Math.PI/180,dl=(b[0]-a[0])*r,dg=(b[1]-a[1])*r,h=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
 const nrm=s=>(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().trim();
 // grafo: arestas entre nós consecutivos ao longo de cada tronco
@@ -949,103 +971,145 @@ function dijkstra(oC,dC,penal,hist){
     if(s&&s.t===e.t){ s.b=e.to; s.ib=e.ib; s.km+=e.km; } else segs.push({t:e.t,a:noAt,b:e.to,ia:e.ia,ib:e.ib,km:e.km}); noAt=e.to; }
   return {ini,fim:best.fim,segs,custo:best.c};
 }
+// opções da rota: melhor caminho pela malha + até 2 alternativas parecidas em km e diferentes em troncos.
+// Quando a malha não compensa (> 1,25 x a ida direta), a ligação direta vira a opção recomendada.
+function sobreposicao(a,b){ // fração do km de troncos da rota a que também está na rota b
+  const sb=new Set(b.segs.map(s=>s.t)), tot=a.segs.reduce((x,s)=>x+s.km,0)||1;
+  return a.segs.filter(s=>sb.has(s.t)).reduce((x,s)=>x+s.km,0)/tot;
+}
 function planejar(o,d){
   const oll=[o[2],o[3]], dll=[d[2],d[3]], ko=nrm(o[0]+"/"+o[1]), kd=nrm(d[0]+"/"+d[1]);
   const dir=kmLL(oll,dll)*FATOR_ESTRADA;
   const oC=candidatos(oll,ko,"o"), dC=candidatos(dll,kd,"d");
   const hp=ROTA_PAR[ko+">"+kd], hist=new Set(hp&&hp.vias_historicas?hp.vias_historicas:[]);
+  const malha=[];
   const r1=dijkstra(oC,dC,null,hist);
-  let res={o,d,oll,dll,dir,hist:ROTA_PAR[ko+">"+kd]||null};
-  // mesma regra do motor: se pela malha passar de 1,25 x a ligação direta, recomenda ligação direta
-  if(!r1||r1.segs.length===0||kmTot(r1)>1.25*dir){ res.local=true; }
   if(r1&&r1.segs.length){
-    res.best=r1;
-    const pen={}; r1.segs.forEach(s=>pen[s.t]=3);
-    const r2=dijkstra(oC,dC,pen,hist);
-    if(r2&&r2.segs.length&&r2.segs.map(s=>s.t).join()!==r1.segs.map(s=>s.t).join()) res.alt=r2;
+    malha.push({tipo:"malha",r:r1,km:kmTot(r1)});
+    const pen={};
+    for(let i=0;i<5&&malha.length<3;i++){
+      malha[malha.length-1].r.segs.forEach(s=>pen[s.t]=(pen[s.t]||1)*1.6);
+      const r=dijkstra(oC,dC,pen,hist); if(!r||!r.segs.length) break;
+      const k=kmTot(r);
+      if(k<=1.2*malha[0].km && malha.every(m=>sobreposicao(r,m.r)<.75&&sobreposicao(m.r,r)<.75)) malha.push({tipo:"malha",r,km:k});
+    }
   }
-  return res;
+  const local=!malha.length||malha[0].km>1.25*dir;
+  const ops=local?[{tipo:"direta",km:dir},...malha.slice(0,1)]:malha;
+  return {o,d,oll,dll,dir,hist:hp||null,ops,local};
 }
 const kmTot=r=>r.ini.km+r.fim.km+r.segs.reduce((s,x)=>s+x.km,0);
-const kmE=k=>fmt(Math.round(k*FATOR_KM));  // km exibido, já calibrado
+const kmE=k=>fmt(Math.round(k*FATOR_KM));
 const kmTr=r=>r.segs.reduce((s,x)=>s+x.km,0);
-function comoRota(res,r){ return {origem:res.o[0]+"/"+res.o[1],destino:res.d[0]+"/"+res.d[1],entrada:r.ini.n,saida:r.fim.n,troncos:r.segs.map(s=>s.t)}; }
-function nomePadrao(res,r){ const o=nrm(res.o[0])+"/"+res.o[1], d=nrm(res.d[0])+"/"+res.d[1];
-  return r?`${o} > ${r.ini.n} > ${r.segs.map(s=>s.t).join(" > ")} > ${r.fim.n} > ${d}`:`${o} > ${d} (local)`; }
+function nomePadrao(res,op){ const o=nrm(res.o[0])+"/"+res.o[1], d=nrm(res.d[0])+"/"+res.d[1];
+  return op.tipo==="malha"?`${o} > ${op.r.ini.n} > ${op.r.segs.map(s=>s.t).join(" > ")} > ${op.r.fim.n} > ${d}`:`${o} > ${d} (ligação direta)`; }
+function rotuloOp(res,i){ return i===0?"Recomendada":(res.ops[i].tipo==="direta"?"Ligação direta":(res.local?"Pela malha (referência)":`Alternativa ${i}`)); }
+
+// traçado contínuo de uma opção: ponta → trechos de tronco (no sentido da viagem) + conectores nos polos → ponta
+function trilha(res,op){
+  if(op.tipo==="direta") return {pontas:[[res.oll,res.dll]],partes:[],conex:[],nos:[]};
+  const r=op.r, partes=r.segs.map(s=>{ const geo=T[s.t].geo, a=Math.min(s.ia,s.ib), b=Math.max(s.ia,s.ib);
+    let p=geo.slice(a,b+1); if(s.ia>s.ib) p=p.slice().reverse(); if(p.length<2) p=[p[0],p[0]]; return {s,p}; });
+  const conex=[], nos=[{id:r.ini.n,ll:partes[0].p[0]}];
+  for(let i=1;i<partes.length;i++){ const pa=partes[i-1].p[partes[i-1].p.length-1], pb=partes[i].p[0];
+    if(kmLL(pa,pb)>.3) conex.push([pa,pb]); nos.push({id:partes[i].s.a,ll:pb}); }
+  const fim=partes[partes.length-1].p; nos.push({id:r.fim.n,ll:fim[fim.length-1]});
+  return {pontas:[[res.oll,partes[0].p[0]],[fim[fim.length-1],res.dll]],partes,conex,nos};
+}
 
 function iniciarPlanejador(){
   if(pmap){ pmap.invalidateSize(); return; }
   pmap=L.map("pmap",{zoomControl:false,zoomSnap:.25}).setView([-23.5,-50],5);
   L.control.zoom({position:"bottomright"}).addTo(pmap); pmap.attributionControl.setPrefix("Contornos: Natural Earth · IBGE");
   pmap.createPane("base"); pmap.getPane("base").style.zIndex=200;
-  pBase=L.layerGroup().addTo(pmap); pCamT=L.layerGroup().addTo(pmap); pCamSel=L.layerGroup().addTo(pmap);
+  // renderizador próprio: um renderizador do Leaflet pertence a um único mapa (compartilhar o do mapa
+  // principal arrastava a malha inteira para cá e tirava os troncos do mapa principal)
+  pSvg=L.svg({padding:.5}); pBase=L.layerGroup().addTo(pmap); pCamSel=L.layerGroup().addTo(pmap);
   redesenharPlan();
-  try{ pmap.fitBounds(L.featureGroup(pCamT.getLayers()).getBounds(),{padding:[20,20]}); }catch(e){}
   if(!planAtual) calcular();
 }
 function redesenharPlan(){
   if(!pmap) return;
-  pBase.clearLayers(); pCamT.clearLayers(); $("pmap").style.background=css("--water");
+  pBase.clearLayers(); $("pmap").style.background=css("--water");
   const br=L.canvas({pane:"base"});
   L.geoJSON(BASE.paises,{renderer:br,interactive:false,style:{color:css("--border"),weight:1,fillColor:css("--land"),fillOpacity:1}}).addTo(pBase);
   L.geoJSON(BASE.ufs,{renderer:br,interactive:false,style:{color:css("--border"),weight:.8,fillColor:css("--land-br"),fillOpacity:1}}).addTo(pBase);
-  for(const t of D.troncos) L.polyline(t.geo,{renderer:svgR,color:css("--seq"+passo(t.viagens_mes)),weight:1+3*Math.sqrt(t.viagens_mes/vmax),opacity:.45,interactive:false}).addTo(pCamT);
-  if(planAtual) desenharPlano(planAtual.res, planAtual.r, false);
+  if(planAtual) desenharPlano(false);
 }
-function desenharPlano(res,r,voa=true){
-  pmap.invalidateSize(); pCamSel.clearLayers(); const hl=css("--hl"), g=[];
-  const tr={renderer:svgR,color:hl,weight:3,dashArray:"5 7",opacity:.95};
-  if(r){
-    for(const s of r.segs){ const geo=T[s.t].geo, a=Math.min(s.ia,s.ib), b=Math.max(s.ia,s.ib), part=geo.slice(a,b+1);
-      g.push(L.polyline(part,{renderer:svgR,color:hl,weight:6,opacity:.92,lineCap:"round"}).bindTooltip(`<b>${s.t}</b> · ${esc(T[s.t].nome)}<br>${s.a} → ${s.b} · ${kmE(s.km)} km`,{className:"tt",sticky:true}).addTo(pCamSel));
-      L.polyline(part,{renderer:svgR,color:"#fff",weight:2,opacity:.85,className:"flow",interactive:false}).addTo(pCamSel); }
-    const ne=N[r.ini.n], ns=N[r.fim.n];
-    g.push(L.polyline([res.oll,[ne.lat,ne.lng]],tr).bindTooltip("Ponta de origem",{className:"tt"}).addTo(pCamSel));
-    g.push(L.polyline([[ns.lat,ns.lng],res.dll],tr).bindTooltip("Ponta de destino",{className:"tt"}).addTo(pCamSel));
-    for(const n of [ne,ns]) L.circleMarker([n.lat,n.lng],{renderer:svgR,radius:5,color:css("--s1"),weight:2,fillColor:css("--accent"),fillOpacity:1}).bindTooltip(`${n.id} · ${esc(cid(n.nome))}`,{className:"tt"}).addTo(pCamSel);
-  } else g.push(L.polyline([res.oll,res.dll],tr).addTo(pCamSel));
-  g.push(L.circleMarker(res.oll,{renderer:svgR,radius:8,color:css("--s1"),weight:2,fillColor:hl,fillOpacity:1}).bindTooltip("Origem: "+esc(res.o[0]),{className:"tt"}).addTo(pCamSel));
-  g.push(L.circleMarker(res.dll,{renderer:svgR,radius:8,color:hl,weight:3,fillColor:css("--s1"),fillOpacity:1}).bindTooltip("Destino: "+esc(res.d[0]),{className:"tt"}).addTo(pCamSel));
-  if(voa){ const b=L.featureGroup(g).getBounds(), o={padding:[50,50],maxZoom:10}; RM?pmap.fitBounds(b,o):pmap.flyToBounds(b,{...o,duration:1,easeLinearity:.2}); }
+// no mapa do planejador entra SOMENTE o que foi planejado: origem, destino e as opções desta rota
+function desenharPlano(voa=true){
+  const {res,sel}=planAtual;
+  pmap.invalidateSize(); pCamSel.clearLayers();
+  const hl=css("--hl"), mu=css("--muted"), g=[];
+  res.ops.forEach((op,i)=>{ if(i===sel) return;
+    const tl=trilha(res,op), st={renderer:pSvg,color:mu,weight:4,opacity:.6,lineCap:"round",lineJoin:"round"};
+    const dica=`<b>${rotuloOp(res,i)}</b> · ~${kmE(op.km)} km<br><span class="muted">clique para ver esta opção</span>`;
+    const add=l=>{ l.bindTooltip(dica,{className:"tt",sticky:true}).on("click",ev=>{L.DomEvent.stopPropagation(ev);escolherOp(i);}).addTo(pCamSel); g.push(l); };
+    tl.partes.forEach(x=>add(L.polyline(x.p,st)));
+    tl.conex.forEach(c=>add(L.polyline(c,{...st,weight:3})));
+    tl.pontas.forEach(c=>add(L.polyline(c,{...st,weight:2.5,dashArray:"4 7"})));
+    const maior=tl.partes.slice().sort((a,b)=>b.p.length-a.p.length)[0];
+    const meio=maior?maior.p[maior.p.length>>1]:[(res.oll[0]+res.dll[0])/2,(res.oll[1]+res.dll[1])/2];
+    L.tooltip({permanent:true,direction:"center",className:"olabel",interactive:false}).setLatLng(meio).setContent(rotuloOp(res,i)).addTo(pCamSel);
+  });
+  const op=res.ops[sel], tl=trilha(res,op);
+  const traco={renderer:pSvg,color:hl,lineCap:"round",lineJoin:"round"};
+  tl.partes.forEach(({s,p})=>{
+    g.push(L.polyline(p,{...traco,weight:6,opacity:.95}).bindTooltip(`<b>${s.t}</b> · ${esc(T[s.t].nome)}<br>${s.a} → ${s.b} · ${kmE(s.km)} km`,{className:"tt",sticky:true}).addTo(pCamSel));
+    L.polyline(p,{renderer:pSvg,color:"#fff",weight:2,opacity:.85,className:"flow",interactive:false}).addTo(pCamSel);
+    L.tooltip({permanent:true,direction:"center",className:"tlabel",interactive:false}).setLatLng(p[p.length>>1]).setContent(s.t).addTo(pCamSel);
+  });
+  tl.conex.forEach(c=>g.push(L.polyline(c,{...traco,weight:4,opacity:.95}).bindTooltip("Conexão entre troncos no polo",{className:"tt",sticky:true}).addTo(pCamSel)));
+  tl.pontas.forEach((c,k)=>g.push(L.polyline(c,{...traco,weight:3,dashArray:"5 7",opacity:.95}).bindTooltip(k?"Ponta de destino":"Ponta de origem",{className:"tt",sticky:true}).addTo(pCamSel)));
+  tl.nos.forEach(n=>L.circleMarker(n.ll,{renderer:pSvg,radius:5,color:hl,weight:2.5,fillColor:css("--s1"),fillOpacity:1}).bindTooltip(`${n.id} · ${esc(cid(N[n.id]?.nome))}`,{className:"tt"}).addTo(pCamSel));
+  g.push(L.circleMarker(res.oll,{renderer:pSvg,radius:8,color:css("--s1"),weight:2,fillColor:hl,fillOpacity:1}).bindTooltip("Origem: "+esc(res.o[0])+"/"+res.o[1],{className:"tt"}).addTo(pCamSel));
+  g.push(L.circleMarker(res.dll,{renderer:pSvg,radius:8,color:hl,weight:3,fillColor:css("--s1"),fillOpacity:1}).bindTooltip("Destino: "+esc(res.d[0])+"/"+res.d[1],{className:"tt"}).addTo(pCamSel));
+  $("pLegOut").hidden=res.ops.length<2;
+  if(voa){ const b=L.featureGroup(g).getBounds(), o={padding:[60,60],maxZoom:10}; RM?pmap.fitBounds(b,o):pmap.flyToBounds(b,{...o,duration:1,easeLinearity:.2}); }
 }
-function htmlRota(res,r,titulo,alt){
-  const tot=kmTot(r), ktr=kmTr(r), pt=pct(ktr,tot), desvio=Math.max(0,Math.round(100*(tot*FATOR_KM/(res.dir/FATOR_ESTRADA)-1)));
+function escolherOp(i){ if(!planAtual||planAtual.sel===i) return; planAtual.sel=i; painelPlano(); desenharPlano(false); }
+
+function htmlDetalhe(res,op){
+  if(op.tipo==="direta") return `<div class="rcard"><div class="lb">Detalhe da opção</div>
+    <p style="margin:8px 0 0;font-size:12.8px;line-height:1.55">Ida direta de ${esc(res.o[0])}/${res.o[1]} a ${esc(res.d[0])}/${res.d[1]}, sem entrar em tronco da malha. km estimado: <b>~${kmE(op.km)} km</b> (linha reta × ${FATOR_ESTRADA.toFixed(2).replace(".",",")}). No mapa a linha é só ilustrativa.</p></div>`;
+  const r=op.r, tot=op.km, ktr=kmTr(r), pt=pct(ktr,tot), desvio=Math.max(0,Math.round(100*(tot/(res.dir/FATOR_ESTRADA)-1)));
   const legs=[`<div class="leg2 pt"><span class="ic"></span><div><div class="tt2">${esc(res.o[0])}/${res.o[1]} → ${r.ini.n}</div><div class="sub">Ponta de origem até ${esc(cid(N[r.ini.n].nome))}${r.ini.prat?" · já praticada no histórico":""}${r.ini.real?"":" · km estimado"}</div></div><span class="km">~${kmE(r.ini.km)} km</span></div>`,
     ...r.segs.map(s=>`<div class="leg2 tr"><span class="ic">T</span><div><div class="tt2"><span class="pipe" style="display:inline-flex"><span class="t" data-t="${s.t}">${s.t}</span></span> ${esc(T[s.t].nome.split(" (")[0])}</div><div class="sub">${s.a} ${esc(cid(N[s.a]?.nome))} → ${s.b} ${esc(cid(N[s.b]?.nome))} · ${fmt(T[s.t].viagens_mes)} viagens/mês no tronco</div></div><span class="km">${kmE(s.km)} km</span></div>`),
     `<div class="leg2 pt"><span class="ic"></span><div><div class="tt2">${r.fim.n} → ${esc(res.d[0])}/${res.d[1]}</div><div class="sub">Ponta de destino a partir de ${esc(cid(N[r.fim.n].nome))}${r.fim.prat?" · já praticada no histórico":""}${r.fim.real?"":" · km estimado"}</div></div><span class="km">~${kmE(r.fim.km)} km</span></div>`];
-  return `<div class="rcard ${alt?"alt":""}" ${alt?'id="pAlt"':""}>
-    <div class="rhead"><div><div class="lb" style="margin-bottom:4px">${titulo}</div><h3>${esc(res.o[0])}/${res.o[1]} → ${esc(res.d[0])}/${res.d[1]}</h3></div><div class="big">~${kmE(tot)}<small>km</small></div></div>
+  return `<div class="rcard"><div class="lb">Detalhe da opção</div>
     <div class="meter"><i data-w="${pt}" style="background:var(--accent)"></i><i data-w="${100-pt}" style="background:var(--hl)"></i></div>
     <div class="legend" style="margin-top:0"><span><i class="sw" style="background:var(--accent)"></i>${pt}% em tronco (${kmE(ktr)} km)</span><span><i class="sw" style="background:var(--hl)"></i>pontas ~${kmE(tot-ktr)} km</span><span class="muted">${desvio}% acima da linha reta</span></div>
-    ${alt?"":`<div class="legs">${legs.join("")}</div><p class="muted" style="font-size:11.5px;margin:8px 0 0">km por estrada (OpenStreetMap). Pontas já praticadas usam o km real; pontas novas são estimadas (linha reta × ${FATOR_ESTRADA.toFixed(2).replace(".",",")}).</p>`}
-  </div>`;
+    <div class="legs">${legs.join("")}</div>
+    <p class="muted" style="font-size:11.5px;margin:8px 0 0">km por estrada (OpenStreetMap). Pontas já praticadas usam o km real; pontas novas são estimadas (linha reta × ${FATOR_ESTRADA.toFixed(2).replace(".",",")}).</p></div>`;
 }
-function mostrarResultado(res){
-  let out="";
-  const r=res.best;
-  if(r){
-    out+=htmlRota(res,r,res.local?"Rota pela malha (comparativo)":"Melhor rota pela malha",false);
-    out+=`<div class="rcard"><div class="lb">Cadastro padronizado sugerido</div><div class="code" id="pNome" style="margin-top:8px">${esc(nomePadrao(res,r))}</div>
-      <button class="btn" id="pCopy" type="button" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button>`;
-    const hst=res.hist;
-    if(hst&&hst.troncos.length){ const igual=hst.troncos.join()===r.segs.map(s=>s.t).join();
-      out+=`<div class="note ${igual?"ok":"warn"}"><span>${igual?"✓":"!"}</span><span>${igual?`<b>Confere com o histórico.</b> Este par já roda ${fmt1(hst.viagens_mes)} viagens/mês pela mesma via`:`<b>O histórico usa outra via:</b> ${hst.troncos.join(" > ")} (${fmt1(hst.viagens_mes)} viagens/mês, ${hst.pct_via_padrao??"–"}% das viagens). Compare antes de cadastrar`}. Hoje há <b>${hst.rotas_cadastradas}</b> rota(s) cadastrada(s) para este par: ${hst.codigos_rota.slice(0,12).join(", ")}${hst.codigos_rota.length>12?"…":""}.</span></div>`;
-    } else if(hst) out+=`<div class="note"><span>i</span><span>Par já operado (${fmt1(hst.viagens_mes)} viagens/mês) sem passar por tronco. Rotas cadastradas hoje: ${hst.codigos_rota.slice(0,12).join(", ")}.</span></div>`;
-    else out+=`<div class="note"><span>i</span><span><b>Par novo:</b> não há viagens deste par cidade → cidade no período analisado.</span></div>`;
-    if(res.local) out+=`<div class="note warn"><span>!</span><span><b>Recomendação: ligação direta.</b> Pela malha a rota passa de 25% acima da ida direta (~${kmE(res.dir)} km). A rota pela malha fica só como referência.</span></div>`;
-    out+=`</div>`;
-    if(res.alt) out+=htmlRota(res,res.alt,"Alternativa (troncos diferentes) · clique para ver",true);
-  } else {
-    out+=`<div class="rcard"><div class="lb">Resultado</div><h3 style="margin:6px 0">Sem tronco na região</h3><p class="muted" style="margin:0;font-size:12.5px">Nenhum nó da malha num raio de ${RAIO_PONTA} km da origem ou do destino. Rota direta estimada: ~${kmE(res.dir)} km.</p></div>`;
-  }
+function painelPlano(){
+  const {res,sel}=planAtual, op=res.ops[sel];
+  if(!res.ops.length){ $("pRes").innerHTML=`<div class="rcard"><div class="lb">Resultado</div><h3 style="margin:6px 0">Sem tronco na região</h3><p class="muted" style="margin:0;font-size:12.5px">Nenhum nó da malha num raio de ${RAIO_PONTA} km. Ida direta estimada: ~${kmE(res.dir)} km.</p></div>`; return; }
+  const base=res.ops[0].km;
+  let out=`<div class="rhead" style="padding:0 2px"><div><div class="lb" style="margin-bottom:4px">${res.ops.length>1?`${res.ops.length} opções para esta rota`:"Opção para esta rota"}</div><h3 style="margin:0;font-size:15px">${esc(res.o[0])}/${res.o[1]} → ${esc(res.d[0])}/${res.d[1]}</h3></div></div>`;
+  out+=`<div class="opcs" role="radiogroup" aria-label="Opções de rota">`+res.ops.map((o,i)=>{
+    const chips=o.tipo==="malha"?o.r.segs.map(s=>`<span class="pipe"><span class="t" title="${esc(T[s.t].nome)}">${s.t}</span></span>`).join(""):'<span class="badge"><i style="background:var(--muted)"></i>sem tronco</span>';
+    const dif=i?`<small>${o.km>=base?"+":"−"}${kmE(Math.abs(o.km-base))} km</small>`:`<small>${o.tipo==="malha"?pct(kmTr(o.r),o.km)+"% em tronco":"ida direta"}</small>`;
+    return `<div class="opc ${i===sel?"on":""}" role="radio" aria-checked="${i===sel}" tabindex="0" data-op="${i}"><span class="rd"></span>
+      <div style="min-width:0"><div class="t1">${rotuloOp(res,i)}${i===0?'<span class="tag2">melhor</span>':""}</div><div class="chips">${chips}</div></div>
+      <div class="kmv">~${kmE(o.km)}<span style="font-size:11px;color:var(--muted);font-weight:500"> km</span>${dif}</div></div>`;}).join("")+`</div>`;
+  out+=htmlDetalhe(res,op);
+  out+=`<div class="rcard"><div class="lb">Cadastro padronizado sugerido</div><div class="code" id="pNome" style="margin-top:8px">${esc(nomePadrao(res,op))}</div>
+    <button class="btn" id="pCopy" type="button" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button>`;
+  const hst=res.hist;
+  if(op.tipo==="malha"&&hst&&hst.troncos.length){ const igual=hst.troncos.join()===op.r.segs.map(s=>s.t).join();
+    out+=`<div class="note ${igual?"ok":"warn"}"><span>${igual?"✓":"!"}</span><span>${igual?`<b>Confere com a rota padrão da malha.</b> Este par roda ${fmt1(hst.viagens_mes)} viagens/mês`:`<b>A rota padrão do par usa outra via:</b> ${hst.troncos.join(" › ")}`}. Hoje há <b>${hst.rotas_cadastradas}</b> rota(s) cadastrada(s) para este par: ${hst.codigos_rota.slice(0,12).join(", ")}${hst.codigos_rota.length>12?"…":""}.</span></div>`;
+  } else if(hst) out+=`<div class="note"><span>i</span><span>Par já operado (${fmt1(hst.viagens_mes)} viagens/mês). Rotas cadastradas hoje: ${hst.codigos_rota.slice(0,12).join(", ")}.</span></div>`;
+  else out+=`<div class="note"><span>i</span><span><b>Par novo:</b> não há viagens deste par cidade → cidade no período analisado.</span></div>`;
+  if(res.local) out+=`<div class="note warn"><span>!</span><span><b>Ligação direta recomendada:</b> pela malha a rota passa de 25% acima da ida direta (~${kmE(res.dir)} km).</span></div>`;
+  out+=`</div>`;
   $("pRes").innerHTML=out;
   crescer($("pRes"));
-  $("pRes").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>abrirTronco(b.dataset.t));
-  $("pCopy")&&($("pCopy").onclick=()=>{ const t=$("pNome").textContent;
-    const ok=()=>toast("Cadastro copiado."); try{navigator.clipboard.writeText(t).then(ok,()=>{selecionar($("pNome"));toast("Selecionei o texto: use Ctrl+C.");});}catch(e){selecionar($("pNome"));} });
-  $("pAlt")&&($("pAlt").onclick=()=>{ const tmp=res.best; res.best=res.alt; res.alt=tmp; planAtual={res,r:res.best}; mostrarResultado(res); desenharPlano(res,res.best); });
-  planAtual={res,r:r||null};
-  desenharPlano(res,r||null);
+  $("pRes").querySelectorAll(".opc").forEach(el=>{ el.onclick=()=>escolherOp(+el.dataset.op);
+    el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();escolherOp(+el.dataset.op);} }; });
+  $("pRes").querySelectorAll(".legs [data-t]").forEach(b=>b.onclick=()=>abrirTronco(b.dataset.t));
+  $("pCopy").onclick=()=>{ const t=$("pNome").textContent; const ok=()=>toast("Cadastro copiado.");
+    try{navigator.clipboard.writeText(t).then(ok,()=>{selecionar($("pNome"));toast("Selecionei o texto: use Ctrl+C.");});}catch(e){selecionar($("pNome"));} };
 }
 function selecionar(el){ const s=getSelection(), rg=document.createRange(); rg.selectNodeContents(el); s.removeAllRanges(); s.addRange(rg); }
 function calcular(){
@@ -1055,15 +1119,18 @@ function calcular(){
   if(o===d){ err.hidden=false; err.textContent="Origem e destino são a mesma cidade."; return; }
   err.hidden=true; $("pCiO").value=o[0]; $("pCiD").value=d[0];
   if(!pmap) iniciarPlanejador();
-  mostrarResultado(planejar(o,d));
+  planAtual={res:planejar(o,d),sel:0};
+  painelPlano(); desenharPlano(true);
 }
-// formulário
+// formulário: recalcula sozinho quando as duas cidades estão escolhidas
 (function(){
   const ufs=Object.keys(CID_UF).sort((a,b)=>a==="EX"?1:b==="EX"?-1:a.localeCompare(b));
   for(const id of ["pUfO","pUfD"]) $(id).innerHTML=ufs.map(u=>`<option value="${u}">${u==="EX"?"Ext.":u}</option>`).join("");
   const preencher=(sel,dl)=>{ $(dl).innerHTML=(CID_UF[$(sel).value]||[]).map(c=>`<option value="${esc(c[0])}">`).join(""); };
+  const auto=()=>{ if(acharCidade($("pUfO").value,$("pCiO").value)&&acharCidade($("pUfD").value,$("pCiD").value)) calcular(); };
   $("pUfO").onchange=()=>{preencher("pUfO","dlO");$("pCiO").value="";$("pCiO").focus();};
   $("pUfD").onchange=()=>{preencher("pUfD","dlD");$("pCiD").value="";$("pCiD").focus();};
+  $("pCiO").addEventListener("change",auto); $("pCiD").addEventListener("change",auto);
   $("pUfO").value="SC"; $("pUfD").value="SP"; preencher("pUfO","dlO"); preencher("pUfD","dlD");
   $("pCiO").value="Chapecó"; $("pCiD").value="Cajamar";
   $("fPlan").onsubmit=e=>{e.preventDefault();calcular();};
