@@ -115,7 +115,7 @@ tbody tr.sel{background:color-mix(in srgb,var(--hl) 14%,transparent)}
           <span><i class="dot" style="background:var(--s2)"></i>ponto de acesso</span>
           <span><i style="width:26px;height:0;border-top:3px dashed var(--hl)"></i>ponta (rota selecionada)</span>
           <label class="ck"><input type="checkbox" id="ckCalor">fluxo bruto (todos os hexágonos)</label>
-          <label class="ck"><input type="checkbox" id="ckNos" checked>nós</label>
+          <label class="ck"><input type="checkbox" id="ckNos" checked>nós (aproxime o mapa)</label>
         </div>
       </div>
       <div class="card" id="painel"><h3>Clique num tronco ou numa rota</h3>
@@ -159,11 +159,12 @@ tbody tr.sel{background:color-mix(in srgb,var(--hl) 14%,transparent)}
   </section>
 
   <section class="tab" id="t-qualidade">
-    <div class="grid2">
+    <div class="grid2" style="grid-template-columns:minmax(0,2fr) minmax(0,3fr)">
       <div class="card"><h3 style="margin-top:0">Fonte da trilha de cada viagem</h3><div class="bars" id="fontes"></div>
         <h3>Por que a viagem não usou o GPS realizado</h3><div class="bars" id="motivos"></div>
         <p class="muted" id="notaQ"></p></div>
-      <div class="card"><h3 style="margin-top:0">Placas sem GPS histórico no período <span class="muted" id="nSem"></span></h3>
+      <div class="card"><h3 style="margin-top:0">Placas sem GPS histórico em algum mês <span class="muted" id="nSem"></span></h3>
+        <p class="muted" style="margin-top:0">“fora da Autotrac”: a placa não aparece nem no rastreamento em tempo real (outro rastreador / terceiro). “Autotrac, falha no histórico”: rastreia ao vivo, mas o banco histórico não gravou todos os meses.</p>
         <div class="filtros"><button class="btn" id="csvS">Exportar CSV</button></div>
         <div class="tw" style="max-height:480px"><table id="tbS"></table></div></div>
     </div>
@@ -210,7 +211,7 @@ const vmax = Math.max(...D.troncos.map(t=>t.viagens_mes),1);
 const passo = v => { const r=v/vmax; return r>.5?5:r>.25?4:r>.1?3:r>.04?2:1; };
 const corT = v => css("--seq"+passo(v));
 const larg = v => 1.5 + 7*Math.sqrt(v/vmax);
-const camT = L.layerGroup().addTo(map), camN = L.layerGroup().addTo(map), camH = L.layerGroup(), camSel = L.layerGroup().addTo(map);
+const camT = L.layerGroup().addTo(map), camN = L.layerGroup(), camH = L.layerGroup(), camSel = L.layerGroup().addTo(map);
 const linhas = {};
 const ord = [...D.troncos].sort((a,b)=>a.viagens-b.viagens);
 for(const t of ord){
@@ -231,8 +232,11 @@ for(const h of D.calor){
    .bindTooltip(`${fmt(h[2])} viagens · ${fmt(h[3])} pares O/D`).addTo(camH);
 }
 document.getElementById("ckCalor").onchange = e => e.target.checked ? camH.addTo(map) : map.removeLayer(camH);
-document.getElementById("ckNos").onchange = e => e.target.checked ? camN.addTo(map) : map.removeLayer(camN);
+// nós só aparecem com zoom >= 7 (no Brasil inteiro viram poluição)
+function nosVis(){ const on=document.getElementById("ckNos").checked && map.getZoom()>=7; on ? camN.addTo(map) : map.removeLayer(camN); }
+document.getElementById("ckNos").onchange = nosVis; map.on("zoomend", nosVis);
 try{ map.fitBounds(L.featureGroup(Object.values(linhas)).getBounds(),{padding:[10,10]}); }catch(e){}
+nosVis();
 
 function chipsRota(r){
   const p=[];

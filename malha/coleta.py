@@ -4,6 +4,7 @@ Uso:
   python -m malha.coleta cargas 2022-01 2026-10    # cadastro de viagens por mês de criação
   python -m malha.coleta gps 2026-04 2026-09       # GPS histórico por placa x mês
   python -m malha.coleta rotas 2026-04 2026-09     # polilinha planejada de cada rota usada no período
+  python -m malha.coleta autotrac 2026-04 2026-09  # placas sem GPS: estão na Autotrac ou usam outro rastreador?
 """
 import glob
 import os
@@ -107,6 +108,15 @@ def rota_planejada(args):
             "km": d["dados"]["metricas_comparativo"]["distancia"]["km_planejado"]}, fn)
 
 
+# ---------------------------------------------------------------- placas na Autotrac (tempo real)
+def placa_autotrac(placa):
+    hoje = date.today()
+    d = get("autotrac/historico_posicoes.php", placa=placa, data_inicio=hoje - timedelta(days=2), data_fim=hoje,
+            formato="lista", limite=1)
+    x = (d.get("dados") or [{}])[0]
+    return placa, bool(d.get("meta", {}).get("total_disponivel")), (x.get("veiculo") or "").split(" - ", 1)[-1].strip()
+
+
 def main():
     cmd, ini, fim = sys.argv[1], sys.argv[2], sys.argv[3]
     ms = list(meses(ini, fim))
@@ -122,6 +132,16 @@ def main():
             for i, _ in enumerate(ex.map(gps_placa_mes, tarefas), 1):
                 if i % 200 == 0:
                     print(f"gps {i}/{len(tarefas)}", flush=True)
+        elif cmd == "autotrac":
+            # só placas sem GPS em algum mês do período: está na Autotrac (tempo real) ou usa outro rastreador?
+            import json
+            placas = sorted({x["veiculo"]["placa"] for x in iter_cargas(ini, fim) if x["veiculo"]["placa"]})
+            falta = [p for p in placas if any(
+                not os.path.exists(fn) or os.path.getsize(fn) <= 60
+                for fn in (os.path.join(DATA, "gps", f"{y}-{m:02d}", f"{p}.json.gz") for y, m in ms))]
+            res = {p: {"autotrac": a, "grupo": g} for p, a, g in ex.map(placa_autotrac, falta)}
+            json.dump(res, open(os.path.join(DATA, "placas_autotrac.json"), "w"), ensure_ascii=False)
+            print(f"{len(falta)} placas verificadas; fora da Autotrac: {sum(not v['autotrac'] for v in res.values())}")
         elif cmd == "rotas":
             por_rota = {}
             for x in iter_cargas(ini, fim):

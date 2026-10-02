@@ -117,7 +117,7 @@ def carregar_viagens(ini, fim):
         rota = x["rota_planejada"]
         vs.append(dict(
             car=x["car_codigo"], criacao=x["data_criacao"][:10], cliente=x["cliente_embarcador"] or "(sem cliente)",
-            placa=x["veiculo"]["placa"], status=x["status"]["descricao"], finalizada=x["status"]["finalizada"],
+            placa=x["veiculo"]["placa"], rastreador=x["veiculo"]["rastreador"] or "", status=x["status"]["descricao"], finalizada=x["status"]["finalizada"],
             ini=x["viagem"]["data_inicio"], fim=x["viagem"]["data_fim"],
             rota=rota["codigo_rota"], rota_desc=rota["descricao"] or "", km_plan=rota["km_planejado"],
             vazio="VAZIO" in (rota["descricao"] or "").upper(),
@@ -311,6 +311,60 @@ def segmentar(adj, nos_extra):
     return trechos, nos
 
 
+def corredores(trechos, vs, tr_v, frac_menor=0.5, frac_maior=0.3):
+    """Une trechos vizinhos quando a maioria das viagens passa direto pelo nó (linha principal).
+    Cada ponta de trecho só se une a um vizinho; o maior fluxo de passagem tem prioridade.
+    Devolve (lista de corredores como cadeias de hexágonos, mapa trecho -> corredor)."""
+    passa = collections.Counter()
+    for v in vs:
+        for a, b in zip(v["troncos"], v["troncos"][1:]):
+            if a != b:
+                passa[(min(a, b), max(a, b))] += 1
+    usado, liga = set(), collections.defaultdict(dict)  # liga[seg][no] = seg vizinho
+    pai = list(range(len(trechos)))
+
+    def raiz(i):
+        while pai[i] != i:
+            pai[i] = pai[pai[i]]
+            i = pai[i]
+        return i
+
+    for (a, b), n in passa.most_common():
+        ta, tb = trechos[a], trechos[b]
+        comum = {ta[0], ta[-1]} & {tb[0], tb[-1]}
+        if not comum or n < frac_menor * min(tr_v[a], tr_v[b]) or n < frac_maior * max(tr_v[a], tr_v[b]):
+            continue
+        no = comum.pop()
+        if (a, no) in usado or (b, no) in usado or raiz(a) == raiz(b):
+            continue
+        usado |= {(a, no), (b, no)}
+        liga[a][no], liga[b][no] = b, a
+        pai[raiz(a)] = raiz(b)
+    out, mapa = [], {}
+    for s in range(len(trechos)):
+        if s in mapa or len(liga[s]) == 2:
+            continue
+        # começa por uma ponta da cadeia e caminha
+        t = trechos[s]
+        cells = t if (t[0] not in liga[s]) else t[::-1]
+        if len(liga[s]) == 1 and cells[-1] not in liga[s]:
+            cells = cells[::-1]
+        cid, cur = len(out), s
+        mapa[cur] = cid
+        while cells[-1] in liga[cur]:
+            nxt = liga[cur][cells[-1]]
+            tn = trechos[nxt]
+            cells = cells + (tn[1:] if tn[0] == cells[-1] else tn[::-1][1:])
+            cur = nxt
+            mapa[cur] = cid
+        out.append(cells)
+    for s in range(len(trechos)):  # anéis fechados (raro): cada trecho fica sozinho
+        if s not in mapa:
+            mapa[s] = len(out)
+            out.append(trechos[s])
+    return out, mapa
+
+
 def suavizar(ll, janela=2):
     """Média móvel do traçado (centros de hexágono fazem zigue-zague); mantém as pontas fixas."""
     if len(ll) < 5:
@@ -423,9 +477,23 @@ def main():
             v["saida"] = tN[-1] if tN[0] in trechos[seq[-2][0]] else tN[0] if tN[-1] in trechos[seq[-2][0]] else v["saida"]
         for i in set(ids):
             tr_v[i] += 1
+
+    # 2b. junta trechos consecutivos em corredores quando o fluxo segue reto pelo nó
+    trechos, mapa = corredores(trechos, vs, tr_v)
+    tr_v = collections.Counter()
+    for v in vs:
+        ids = []
+        for s in v["troncos"]:
+            c = mapa[s]
+            if not ids or ids[-1] != c:
+                ids.append(c)
+        v["troncos"] = ids
+        for i in set(ids):
+            tr_v[i] += 1
             tr_od[i].add((v["orig"], v["dest"]))
             tr_cli[i][v["cliente"]] += 1
             tr_rotas[i].add(v["rota"])
+    print("corredores:", len(trechos), flush=True)
 
     # 3. tabelas de saída
     n_meses = len(ms)
@@ -543,10 +611,19 @@ def placas_sem_gps(vs, ms):
     for v in vs:
         if v["placa"]:
             por[v["placa"]].append(v)
+    import json
+    fn = os.path.join(DATA, "placas_autotrac.json")
+    at = json.load(open(fn)) if os.path.exists(fn) else {}
     out = []
     for p, lst in por.items():
         if len(tem.get(p, [])) < len(ms):
-            out.append(dict(placa=p, viagens=len(lst), meses_com_gps=len(tem.get(p, [])), meses_no_periodo=len(ms),
+            a = at.get(p)
+            situacao = ("não verificada" if a is None else "Autotrac, falha no histórico" if a["autotrac"]
+                        else "fora da Autotrac")
+            out.append(dict(placa=p, situacao=situacao, viagens=len(lst), meses_com_gps=len(tem.get(p, [])),
+                            meses_no_periodo=len(ms),
+                            rastreador=collections.Counter(v["rastreador"] for v in lst).most_common(1)[0][0],
+                            ultima_viagem=max(v["criacao"] for v in lst),
                             cliente_principal=collections.Counter(v["cliente"] for v in lst).most_common(1)[0][0]))
     out.sort(key=lambda r: (r["meses_com_gps"], -r["viagens"]))
     return out
@@ -594,8 +671,10 @@ def exportar_excel(out, caminho):
     aba("Pontas", ["Tipo", "Cidade", "Nó", "Viagens"],
         [[p["tipo"], p["cidade"], p["no"], p["viagens"]] for p in sorted(out["pontas"], key=lambda p: -p["viagens"])])
     sem = k["placas_sem_gps_detalhe"]
-    aba("Placas sem GPS", ["Placa", "Viagens no período", "Meses com GPS", "Meses no período", "Cliente principal"],
-        [[p["placa"], p["viagens"], p["meses_com_gps"], p["meses_no_periodo"], p["cliente_principal"]] for p in sem])
+    aba("Placas sem GPS", ["Placa", "Situação", "Rastreador (cadastro)", "Viagens no período", "Meses com GPS",
+                           "Meses no período", "Última viagem", "Cliente principal"],
+        [[p["placa"], p["situacao"], p["rastreador"], p["viagens"], p["meses_com_gps"], p["meses_no_periodo"],
+          p["ultima_viagem"], p["cliente_principal"]] for p in sem])
     wb.save(caminho)
 
 
