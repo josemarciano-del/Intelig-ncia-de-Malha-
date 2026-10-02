@@ -32,6 +32,8 @@ def main():
     html = tpl.replace("/*__LEAFLET_CSS__*/", open(os.path.join(ref, "leaflet.css"), encoding="utf-8").read())
     html = html.replace("/*__LEAFLET_JS__*/", open(os.path.join(ref, "leaflet.js"), encoding="utf-8").read())
     html = html.replace("/*__BASEMAP__*/null", open(os.path.join(ref, "basemap.json"), encoding="utf-8").read())
+    rod = os.path.join(ref, "rodovias.json")
+    html = html.replace("/*__RODOVIAS__*/null", open(rod, encoding="utf-8").read() if os.path.exists(rod) else "null")
     html = html.replace("/*__DADOS__*/null", js)
     html = html.replace("/*__CIDADES__*/null", json.dumps(cidades(dados), ensure_ascii=False, separators=(",", ":")))
     destino = os.path.join(SAIDA, "dashboard_malha.html")

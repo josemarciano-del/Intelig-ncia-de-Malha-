@@ -23,7 +23,7 @@
 }
 :root{
   color-scheme: dark;
-  --water:#08090a; --land:#121417; --land-br:#15181c; --border:#2a2d33; --label:#7a808a; --muni:#23272d; --ufline:#565c66;
+  --water:#08090a; --land:#121417; --land-br:#15181c; --border:#2a2d33; --label:#7a808a; --muni:#23272d; --ufline:#565c66; --rod-fed:#a08c62; --rod-est:#655c4a; --rod-ext:#7f7563;
   --bg:#08090a; --side:#0c0d0f; --s1:#111214; --s2:#16171a; --s3:#1c1d21; --line:#24262b; --line2:#2e3036;
   --ink:#f4f5f6; --ink2:#a9adb5; --muted:#7a7f88;
   --accent:#3987e5; --accent-soft:rgba(57,135,229,.14); --accent-ink:#8fc0f7;
@@ -35,7 +35,7 @@
 }
 @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ 
   color-scheme: light;
-  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#6f747b; --muni:#dfe2e6; --ufline:#9da3ab;
+  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#6f747b; --muni:#dfe2e6; --ufline:#9da3ab; --rod-fed:#b28f55; --rod-est:#d1c1a0; --rod-ext:#c1ae8b;
   --bg:#f6f6f4; --side:#fbfbfa; --s1:#ffffff; --s2:#f7f7f5; --s3:#efefec; --line:#e4e3de; --line2:#d6d5cf;
   --ink:#0b0b0b; --ink2:#52514e; --muted:#7c7b76;
   --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10); --accent-ink:#1c5cab;
@@ -46,7 +46,7 @@
   --glass: rgba(255,255,255,.86); --shadow: 0 12px 36px rgba(20,20,20,.12); } }
 :root[data-theme="light"]{
   color-scheme: light;
-  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#6f747b; --muni:#dfe2e6; --ufline:#9da3ab;
+  --water:#e9eef3; --land:#fbfbfa; --land-br:#ffffff; --border:#cfd3d8; --label:#6f747b; --muni:#dfe2e6; --ufline:#9da3ab; --rod-fed:#b28f55; --rod-est:#d1c1a0; --rod-ext:#c1ae8b;
   --bg:#f6f6f4; --side:#fbfbfa; --s1:#ffffff; --s2:#f7f7f5; --s3:#efefec; --line:#e4e3de; --line2:#d6d5cf;
   --ink:#0b0b0b; --ink2:#52514e; --muted:#7c7b76;
   --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10); --accent-ink:#1c5cab;
@@ -211,6 +211,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .trunk{transition:opacity var(--d-mod) var(--ease-prod),stroke-width var(--d-fast)}
 .dim .trunk:not(.sel){opacity:.18}
 .uf{color:var(--label);font:700 11px var(--font);letter-spacing:.08em;text-align:center;text-shadow:0 0 3px var(--land-br),0 0 3px var(--land-br)}
+.shd{font:700 10px var(--font);line-height:14px;padding:0 5px;border-radius:4px;white-space:nowrap;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.shd.fed{background:#ffffff;color:#141414;border:1.5px solid #141414}
+.shd.est{background:var(--s1);color:var(--ink);border:1px solid var(--rod-fed)}
+.shd.ext{background:var(--s2);color:var(--ink2);border:1px solid var(--line2)}
 .mun{color:var(--label);font:500 10px var(--font);text-align:center;white-space:nowrap;text-shadow:0 0 2px var(--land-br),0 0 3px var(--land-br),0 0 4px var(--land-br)}
 
 /* esquema da rota: origem ● — T001 — T004 — ● destino */
@@ -442,6 +446,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
           <h4>Camadas</h4>
           <div class="row">Fluxo animado nos troncos<label class="switch"><input type="checkbox" id="ckFlow" checked><span></span></label></div>
           <div class="row">Nós (bifurcação e acesso)<label class="switch"><input type="checkbox" id="ckNos" checked><span></span></label></div>
+          <div class="row">Rodovias (federais e estaduais)<label class="switch"><input type="checkbox" id="ckRod" checked><span></span></label></div>
           <div class="row">Fluxo bruto por hexágono<label class="switch"><input type="checkbox" id="ckCalor"><span></span></label></div>
           <h4 style="margin-top:14px">Volume mínimo</h4>
           <input type="range" id="rgMin" min="0" max="100" value="0">
@@ -451,6 +456,9 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
           <div class="r"><div class="ramp" id="ramp"></div><span id="rampLbl">viagens/mês</span></div>
           <div class="r"><i class="sw" style="background:var(--s1);border:2px solid var(--ink);border-radius:50%;width:9px;height:9px"></i>bifurcação
             <i class="sw" style="background:var(--hl);border-radius:50%;width:9px;height:9px;margin-left:8px"></i>acesso</div>
+          <div class="r"><i style="width:22px;height:3px;background:var(--rod-fed);display:inline-block"></i>rodovia federal
+            <i style="width:22px;height:2px;background:var(--rod-est);display:inline-block;margin-left:8px"></i>estadual
+            <i style="width:22px;height:0;border-top:2px dashed var(--rod-fed);display:inline-block;margin-left:8px"></i>sem pavimento</div>
         </div>
         <aside class="float drawer" id="drawer" aria-live="polite">
           <div class="hd"><div style="min-width:0"><span class="tag" id="dTag"></span><h2 id="dTit"></h2><p id="dSub"></p></div>
@@ -485,6 +493,7 @@ tbody tr.enter{animation:rowIn var(--d-mod) var(--ease-in) both}
               <div class="r"><i style="width:24px;height:4px;border-radius:2px;background:var(--hl);display:inline-block"></i>opção selecionada</div>
               <div class="r" id="pLegOut"><i style="width:24px;height:4px;border-radius:2px;background:var(--muted);opacity:.7;display:inline-block"></i>outras opções (clique para ver)</div>
               <div class="r"><i style="width:24px;height:0;border-top:3px dashed var(--hl);display:inline-block"></i>ponta (acesso à malha)</div>
+              <div class="r"><i style="width:24px;height:3px;background:var(--rod-fed);display:inline-block"></i>rodovia federal · <i style="width:16px;height:2px;background:var(--rod-est);display:inline-block"></i> estadual</div>
             </div></div>
         </div>
       </section>
@@ -660,19 +669,33 @@ const UF_GEO=BASE.ufs.map(u=>({uf:u[1],aneis:u[2].map(decPl)}));
 const MUN_GEO=BASE.mun.map(m=>{ const aneis=m[3].map(decPl), cx=caixa(aneis); let maior=aneis[0]; for(const a of aneis) if(a.length>maior.length) maior=a;
   const cm=caixa([maior]); return {nome:m[1],uf:m[2],aneis,cx,c:[(cm[0]+cm[1])/2,(cm[2]+cm[3])/2]}; });
 const ZOOM_MUN=6.25, ZOOM_NOME=8.75;
+// malha rodoviária (OpenStreetMap): federais BR, estaduais e rotas nacionais dos vizinhos
+const ROD=/*__RODOVIAS__*/null;
+const ZOOM_EST=5.5, ZOOM_DET=7.5;
+const peca=x=>{ const p=decPl(x[3]), cx=caixa([p]); return {c:x[0],r:x[1],s:x[2],p,cx}; };
+const ROD_G=ROD?ROD.geral.map(peca):[], ROD_B={};
+function blocoRod(k){ if(!(k in ROD_B)) ROD_B[k]=(ROD&&ROD.blocos[k]||[]).map(peca); return ROD_B[k]; }
+function estiloRod(c,s,det){ return {color:css(c==="fed"?"--rod-fed":c==="est"?"--rod-est":"--rod-ext"),
+  weight:c==="fed"?(det?3:1.5):c==="ext"?(det?2.4:1.2):(det?2:.9), opacity:s?.75:1, dashArray:s?(det?"6 5":"3 4"):null, lineCap:"round", lineJoin:"round", interactive:false}; }
+function refPrincipal(r){ const lst=(r||"").split(";").filter(Boolean); return lst.find(x=>x.startsWith("BR-"))||lst[0]||""; }
 const semAc=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
 const CID_DADOS=new Set(D.rotas.flatMap(r=>[r.origem,r.destino]).map(semAc));
 const MUN_ORDEM=[...MUN_GEO].sort((a,b)=>(CID_DADOS.has(semAc(b.nome+"/"+b.uf))?1:0)-(CID_DADOS.has(semAc(a.nome+"/"+a.uf))?1:0));
 // cada mapa ganha os próprios renderizadores (um renderizador do Leaflet pertence a um único mapa)
 function criarBase(mapa, el){
-  for(const [p,z] of [["base",200],["munis",205],["ufs",215],["rotulos",450]]){ if(!mapa.getPane(p)) mapa.createPane(p); mapa.getPane(p).style.zIndex=z; }
-  for(const p of ["munis","ufs","rotulos"]) mapa.getPane(p).style.pointerEvents="none";
-  const rFundo=L.canvas({pane:"base"}), rMun=L.canvas({pane:"munis",padding:.3}), rUf=L.canvas({pane:"ufs",padding:.3});
+  for(const [p,z] of [["base",200],["munis",205],["ufs",215],["rodovias",300],["rotulos",450]]){ if(!mapa.getPane(p)) mapa.createPane(p); mapa.getPane(p).style.zIndex=z; }
+  for(const p of ["munis","ufs","rodovias","rotulos"]) mapa.getPane(p).style.pointerEvents="none";
+  const rFundo=L.canvas({pane:"base"}), rMun=L.canvas({pane:"munis",padding:.3}), rUf=L.canvas({pane:"ufs",padding:.3}), rRod=L.canvas({pane:"rodovias",padding:.3});
   const gFundo=L.layerGroup().addTo(mapa), gMun=L.layerGroup(), gUf=L.layerGroup().addTo(mapa), gRotUf=L.layerGroup().addTo(mapa), gRotMun=L.layerGroup().addTo(mapa), gSel=L.layerGroup().addTo(mapa);
+  const gRodFed=L.layerGroup(), gRodOut=L.layerGroup(), gRodDet=L.layerGroup();
   const dica=L.tooltip({className:"tt",direction:"top",offset:[0,-8]});
-  let atual=null, pend=false;
+  let atual=null, pend=false, rodOn=true, blocosOn=new Map();
+  // agrupa peças por classe/pavimento numa única multilinha (poucas camadas = mapa leve)
+  function multi(pecas,det,alvo){ const g={}; for(const x of pecas) (g[x.c+"|"+x.s]=g[x.c+"|"+x.s]||[]).push(x.p);
+    for(const k of ["est|1","est|0","ext|1","ext|0","fed|1","fed|0"]) if(g[k]){ const [c,s]=k.split("|"); L.polyline(g[k],{...estiloRod(c,+s,det),renderer:rRod}).addTo(alvo); } }
   function desenhar(){
     gFundo.clearLayers(); gMun.clearLayers(); gUf.clearLayers(); gRotUf.clearLayers(); gSel.clearLayers(); atual=null;
+    gRodFed.clearLayers(); gRodOut.clearLayers(); gRodDet.clearLayers(); blocosOn=new Map();
     $(el).style.background=css("--water");
     L.geoJSON(BASE.paises,{renderer:rFundo,interactive:false,style:{color:css("--border"),weight:1,fillColor:css("--land"),fillOpacity:1}}).addTo(gFundo);
     for(const u of UF_GEO) L.polygon(u.aneis,{renderer:rFundo,interactive:false,stroke:false,fillColor:css("--land-br"),fillOpacity:1}).addTo(gFundo);
@@ -680,29 +703,68 @@ function criarBase(mapa, el){
     for(const m of MUN_GEO) L.polygon(m.aneis,stM).addTo(gMun);
     for(const u of UF_GEO){ L.polygon(u.aneis,{renderer:rUf,interactive:false,fill:false,color:css("--ufline"),weight:1.6}).addTo(gUf);
       L.marker(L.polygon(u.aneis).getBounds().getCenter(),{pane:"rotulos",interactive:false,icon:L.divIcon({className:"uf",html:u.uf,iconSize:[30,14]})}).addTo(gRotUf); }
+    multi(ROD_G.filter(x=>x.c==="fed"),false,gRodFed); multi(ROD_G.filter(x=>x.c!=="fed"),false,gRodOut);
     zoom();
   }
-  function zoom(){ if(mapa.getZoom()>=ZOOM_MUN){ if(!mapa.hasLayer(gMun)) gMun.addTo(mapa); } else { mapa.removeLayer(gMun); limpar(); } nomes(); }
-  // nomes das cidades sem sobreposição; cidades que aparecem nas viagens têm prioridade
-  function nomes(){ gRotMun.clearLayers(); if(mapa.getZoom()<ZOOM_NOME) return; const b=mapa.getBounds().pad(-.03), caixas=[];
-    for(const m of MUN_ORDEM){ if(caixas.length>=260) break; if(!b.contains(m.c)) continue;
+  function chavesVisiveis(){ const b=mapa.getBounds().pad(.15), ks=[];
+    for(let la=Math.floor(b.getSouth());la<=Math.floor(b.getNorth());la++) for(let lo=Math.floor(b.getWest());lo<=Math.floor(b.getEast());lo++) ks.push(la+","+lo);
+    return ks; }
+  function rodovias(){
+    const z=mapa.getZoom(), det=rodOn&&z>=ZOOM_DET;
+    const liga=(g,on)=>on?(mapa.hasLayer(g)||g.addTo(mapa)):mapa.removeLayer(g);
+    liga(gRodFed,rodOn&&!det); liga(gRodOut,rodOn&&!det&&z>=ZOOM_EST); liga(gRodDet,det);
+    if(!det) return;
+    const ks=new Set(chavesVisiveis());
+    for(const [k,g] of blocosOn) if(!ks.has(k)){ gRodDet.removeLayer(g); blocosOn.delete(k); }
+    for(const k of ks) if(!blocosOn.has(k)){ const g=L.layerGroup(); multi(blocoRod(k),true,g); g.addTo(gRodDet); blocosOn.set(k,g); }
+  }
+  function zoom(){ if(mapa.getZoom()>=ZOOM_MUN){ if(!mapa.hasLayer(gMun)) gMun.addTo(mapa); } else { mapa.removeLayer(gMun); limpar(); } rodovias(); nomes(); }
+  // placas das rodovias e nomes das cidades, sem sobreposição (placas BR primeiro, depois estaduais, depois cidades)
+  function nomes(){ gRotMun.clearLayers(); const z=mapa.getZoom(); const b=mapa.getBounds().pad(-.03), caixas=[], feitas=[];
+    const livre=cx=>!caixas.some(k=>cx[0]<k[2]&&cx[2]>k[0]&&cx[1]<k[3]&&cx[3]>k[1]);
+    if(rodOn&&z>=ZOOM_DET){
+      const pecas=[...blocosOn.keys()].flatMap(k=>blocoRod(k)).filter(x=>x.r&&x.p.length>=4&&/^[A-Z]/.test(refPrincipal(x.r))).sort((a,b)=>(a.c==="fed"?0:1)-(b.c==="fed"?0:1)||b.p.length-a.p.length);
+      const maxP=z<9?55:z<10.5?85:110, dist=z<9?320:220;
+      for(const x of pecas){ if(feitas.length>=maxP) break; if(z<9&&x.c!=="fed"&&x.s) continue; const m=x.p[x.p.length>>1]; if(!b.contains(m)) continue;
+        const t=refPrincipal(x.r), pt=mapa.latLngToContainerPoint(m), w=t.length*6.3+12, cx=[pt.x-w/2,pt.y-11,pt.x+w/2,pt.y+11];
+        if(!livre(cx)||feitas.some(f=>f.t===t&&Math.hypot(f.x-pt.x,f.y-pt.y)<dist)) continue;
+        caixas.push(cx); feitas.push({t,x:pt.x,y:pt.y});
+        L.marker(m,{pane:"rotulos",interactive:false,icon:L.divIcon({className:"shd "+x.c,html:esc(t),iconSize:[Math.ceil(w),16]})}).addTo(gRotMun); } }
+    if(z<ZOOM_NOME) return;
+    let n=0;
+    for(const m of MUN_ORDEM){ if(n>=240) break; if(!b.contains(m.c)) continue;
       const p=mapa.latLngToContainerPoint(m.c), w=m.nome.length*5.6+6, cx=[p.x-w/2,p.y-8,p.x+w/2,p.y+8];
-      if(caixas.some(k=>cx[0]<k[2]&&cx[2]>k[0]&&cx[1]<k[3]&&cx[3]>k[1])) continue;
-      caixas.push(cx);
+      if(!livre(cx)) continue; caixas.push(cx); n++;
       L.marker(m.c,{pane:"rotulos",interactive:false,icon:L.divIcon({className:"mun",html:esc(m.nome),iconSize:[Math.ceil(w),14]})}).addTo(gRotMun); } }
   function limpar(){ gSel.clearLayers(); atual=null; mapa.closeTooltip(dica); }
-  // destaque do município sob o mouse (busca por caixa + ponto no polígono; não disputa clique com os troncos)
+  // rodovia mais próxima do mouse (até 7 px), procurando só nos blocos em volta do cursor
+  function rodoviaPerto(ll){
+    const z=mapa.getZoom(); if(!rodOn||z<ZOOM_DET) return null;
+    const gpp=360/(256*Math.pow(2,z)), co=Math.cos(ll.lat*Math.PI/180), lim=7, mg=lim*gpp;
+    let best=null, bd=lim;
+    for(let a=-1;a<=1;a++) for(let o=-1;o<=1;o++) for(const x of blocoRod((Math.floor(ll.lat)+a)+","+(Math.floor(ll.lng)+o))){
+      if(ll.lat<x.cx[0]-mg||ll.lat>x.cx[1]+mg||ll.lng<x.cx[2]-mg||ll.lng>x.cx[3]+mg) continue;
+      for(let i=1;i<x.p.length;i++){ const A=x.p[i-1],B=x.p[i];
+        const ax=(A[1]-ll.lng)/gpp, ay=(A[0]-ll.lat)/(gpp*co), bx=(B[1]-ll.lng)/gpp, by=(B[0]-ll.lat)/(gpp*co);
+        const dx=bx-ax, dy=by-ay, t=Math.max(0,Math.min(1,-(ax*dx+ay*dy)/((dx*dx+dy*dy)||1)));
+        const d=Math.hypot(ax+t*dx,ay+t*dy); if(d<bd){ bd=d; best=x; } } }
+    return best;
+  }
+  // destaque do município e da rodovia sob o mouse (não disputa clique com os troncos)
   mapa.on("mousemove",e=>{ if(pend||mapa.getZoom()<ZOOM_MUN) return; pend=true;
     requestAnimationFrame(()=>{ pend=false; const p=[e.latlng.lat,e.latlng.lng];
       const m=MUN_GEO.find(m=>p[0]>=m.cx[0]&&p[0]<=m.cx[1]&&p[1]>=m.cx[2]&&p[1]<=m.cx[3]&&m.aneis.some(a=>dentro(p,a)));
-      if(!m){ limpar(); return; }
+      const rd=rodoviaPerto(e.latlng);
+      if(!m&&!rd){ limpar(); return; }
       if(m!==atual){ gSel.clearLayers(); atual=m;
-        L.polygon(m.aneis,{renderer:rMun,interactive:false,color:css("--accent"),weight:2,fill:true,fillColor:css("--accent"),fillOpacity:.07}).addTo(gSel); }
-      dica.setLatLng(e.latlng).setContent(`<b>${esc(m.nome)}</b>/${m.uf}`); if(!mapa.hasLayer(dica)) dica.addTo(mapa); }); });
-  mapa.on("mouseout",limpar); mapa.on("zoomend",zoom); mapa.on("moveend",nomes);
-  return {desenhar};
+        if(m) L.polygon(m.aneis,{renderer:rMun,interactive:false,color:css("--accent"),weight:2,fill:true,fillColor:css("--accent"),fillOpacity:.07}).addTo(gSel); }
+      const tr=rd?`<b>${esc((rd.r||"rodovia sem código").split(";").join(" / "))}</b> · ${rd.s?"não pavimentada":"pavimentada"}${rd.c==="ext"?" · exterior":""}`:"";
+      dica.setLatLng(e.latlng).setContent(tr&&m?`${tr}<br><span class="muted">${esc(m.nome)}/${m.uf}</span>`:tr||`<b>${esc(m.nome)}</b>/${m.uf}`);
+      if(!mapa.hasLayer(dica)) dica.addTo(mapa); }); });
+  mapa.on("mouseout",limpar); mapa.on("zoomend",zoom); mapa.on("moveend",()=>{ rodovias(); nomes(); });
+  return {desenhar, rodovias:on=>{ rodOn=on; rodovias(); nomes(); }};
 }
-map.attributionControl.setPrefix("Limites: IBGE · Natural Earth");
+map.attributionControl.setPrefix("Limites: IBGE · Natural Earth · Rodovias: © colaboradores do OpenStreetMap");
 const baseMapa=criarBase(map,"map");
 function desenharBase(){ baseMapa.desenhar(); }
 const svgR=L.svg({padding:.5}), canR=L.canvas();
@@ -749,6 +811,7 @@ function aplicarTemaMapa(){
 }
 $("rampLbl").textContent=`viagens/mês (até ${fmt(vmax)})`;
 $("ckFlow").onchange=desenharTroncos;
+$("ckRod").onchange=e=>baseMapa.rodovias(e.target.checked);
 $("ckNos").onchange=nosVis; map.on("zoomend",nosVis);
 $("ckCalor").onchange=e=>{ if(e.target.checked){desenharCalor();camH.addTo(map);} else map.removeLayer(camH); };
 $("rgMin").oninput=()=>{ $("rgLbl").textContent=`≥ ${fmt(Math.round(+$("rgMin").value*vmax/100*.5))} viagens/mês`; desenharTroncos(); };
@@ -1065,7 +1128,7 @@ function trilha(res,op){
 function iniciarPlanejador(){
   if(pmap){ pmap.invalidateSize(); return; }
   pmap=L.map("pmap",{zoomControl:false,zoomSnap:.25}).setView([-23.5,-50],5);
-  L.control.zoom({position:"bottomright"}).addTo(pmap); pmap.attributionControl.setPrefix("Limites: IBGE · Natural Earth");
+  L.control.zoom({position:"bottomright"}).addTo(pmap); pmap.attributionControl.setPrefix("Limites: IBGE · Natural Earth · Rodovias: © colaboradores do OpenStreetMap");
   pBaseObj=criarBase(pmap,"pmap");
   // renderizador próprio: um renderizador do Leaflet pertence a um único mapa (compartilhar o do mapa
   // principal arrastava a malha inteira para cá e tirava os troncos do mapa principal)

@@ -42,4 +42,11 @@ Saídas em `data/saida/` (fora do git, contém dados confidenciais):
    O planejador do dashboard usa exatamente a mesma regra.
 7. Nomes: municípios do IBGE no Brasil; Natural Earth no exterior.
 
+## Mapa-base
+
+- Limites de UFs e municípios: malha IBGE (`python -m malha.ref_malhas` regenera `malha/ref/basemap.json`).
+- Rodovias federais (BR), estaduais (SC-, SP-, SPA-, ERS-...) e rotas nacionais de AR/CL/PY: OpenStreetMap
+  (`python -m malha.rodovias` regenera `malha/ref/rodovias.json` a partir dos extratos em `data/osm/`,
+  baixados de https://download.openstreetmap.fr/extracts/south-america/). Dados © colaboradores do OpenStreetMap (ODbL).
+
 Parâmetros no topo de `malha/processa.py`. Detalhes das APIs: [docs/apis.md](docs/apis.md).
