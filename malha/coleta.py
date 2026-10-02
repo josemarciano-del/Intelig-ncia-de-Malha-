@@ -91,18 +91,34 @@ def gps_placa_mes(args):
 
 
 # ---------------------------------------------------------------- rotas planejadas
+def amostra(cars, n):
+    """As 3 viagens mais recentes + viagens espalhadas no resto do período (o 404 do comparativo é por carga)."""
+    if len(cars) <= n:
+        return list(cars)
+    resto = cars[3:]
+    passo = len(resto) / (n - 3)
+    return cars[:3] + [resto[int(i * passo)] for i in range(n - 3)]
+
+
 def rota_planejada(args):
-    """Polilinha planejada da rota; tenta até 5 viagens (o comparativo dá 404/422 em algumas cargas)."""
+    """Polilinha planejada da rota; tenta até 12 viagens (o comparativo dá 404/422 em algumas cargas)."""
     cod, cars = args
     fn = os.path.join(DATA, "rotas", f"{cod}.json.gz")
-    if os.path.exists(fn) and not ler(fn).get("erro"):
-        return
-    for car in cars[:5]:
+    tentados = []
+    if os.path.exists(fn):
+        r = ler(fn)
+        if not r.get("erro"):
+            return
+        tentados = r.get("tentados") or cars[:5]   # coleta antiga tentava as 5 mais recentes
+    d = {}
+    for car in [c for c in amostra(cars, 12) if c not in tentados]:
         d = get("viagem/comparativo.php", car_codigo=car)
+        tentados.append(car)
         if d.get("sucesso"):
             break
     else:
-        salvar({"codigo_rota": cod, "erro": d.get("erro")}, fn)
+        if d or not os.path.exists(fn):
+            salvar({"codigo_rota": cod, "erro": d.get("erro"), "tentados": tentados}, fn)
         return
     p = d["dados"]["camada_planejada"]
     salvar({"codigo_rota": cod, "car_codigo": car, "descricao": p.get("descricao_rota"),
